@@ -1,12 +1,45 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package remote
 
 import (
 	"runtime"
 	"sync/atomic"
 
-	"github.com/AsynkronIT/goring"
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/AsynkronIT/protoactor-go/internal/queue/lfqueue"
+	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/internal/queue/goring"
+	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
+	"github.com/ontio/ontology-eventbus/mailbox"
 )
 
 const (
@@ -20,108 +53,106 @@ const (
 
 type endpointWriterMailbox struct {
 	userMailbox     *goring.Queue
-	systemMailbox   *lfqueue.LockfreeQueue
+	systemMailbox   *mpsc.Queue
 	schedulerStatus int32
 	hasMoreMessages int32
-	invoker         actor.MessageInvoker
+	invoker         mailbox.MessageInvoker
 	batchSize       int
-	dispatcher      actor.Dispatcher
+	dispatcher      mailbox.Dispatcher
 	suspended       bool
 }
 
-func (mailbox *endpointWriterMailbox) PostUserMessage(message interface{}) {
+func (m *endpointWriterMailbox) PostUserMessage(message interface{}) {
 	//batching mailbox only use the message part
-	mailbox.userMailbox.Push(message)
-	mailbox.schedule()
+	m.userMailbox.Push(message)
+	m.schedule()
 }
 
-func (mailbox *endpointWriterMailbox) PostSystemMessage(message actor.SystemMessage) {
-	mailbox.systemMailbox.Push(message)
-	mailbox.schedule()
+func (m *endpointWriterMailbox) PostSystemMessage(message interface{}) {
+	m.systemMailbox.Push(message)
+	m.schedule()
 }
 
-func (mailbox *endpointWriterMailbox) schedule() {
-	atomic.StoreInt32(&mailbox.hasMoreMessages, mailboxHasMoreMessages) //we have more messages to process
-	if atomic.CompareAndSwapInt32(&mailbox.schedulerStatus, mailboxIdle, mailboxRunning) {
-		mailbox.dispatcher.Schedule(mailbox.processMessages)
+func (m *endpointWriterMailbox) schedule() {
+	atomic.StoreInt32(&m.hasMoreMessages, mailboxHasMoreMessages) //we have more messages to process
+	if atomic.CompareAndSwapInt32(&m.schedulerStatus, mailboxIdle, mailboxRunning) {
+		m.dispatcher.Schedule(m.processMessages)
 	}
 }
 
-func (mailbox *endpointWriterMailbox) Suspend() {
-
-}
-
-func (mailbox *endpointWriterMailbox) Resume() {
-
-}
-
-func (m *endpointWriterMailbox) ConsumeSystemMessages() bool {
-	if sysMsg := m.systemMailbox.Pop(); sysMsg != nil {
-		sys, _ := sysMsg.(actor.SystemMessage)
-		switch sys.(type) {
-		case *actor.SuspendMailbox:
-			m.suspended = true
-		case *actor.ResumeMailbox:
-			m.suspended = false
-		}
-
-		m.invoker.InvokeSystemMessage(sys)
-		return true
-	}
-	return false
-}
-
-func (mailbox *endpointWriterMailbox) processMessages() {
+func (m *endpointWriterMailbox) processMessages() {
 	//we are about to start processing messages, we can safely reset the message flag of the mailbox
-	atomic.StoreInt32(&mailbox.hasMoreMessages, mailboxHasNoMessages)
-	batchSize := mailbox.batchSize
+	atomic.StoreInt32(&m.hasMoreMessages, mailboxHasNoMessages)
 process:
-	for {
-		if mailbox.ConsumeSystemMessages() {
-			continue
-		} else if mailbox.suspended {
-			// exit processing is suspended and no system messages were processed
-			break process
-		}
-
-		if userMsg, ok := mailbox.userMailbox.PopMany(int64(batchSize)); ok {
-			mailbox.invoker.InvokeUserMessage(userMsg)
-		} else {
-			break process
-		}
-
-		runtime.Gosched()
-	}
+	m.run()
 
 	// set mailbox to idle
-	atomic.StoreInt32(&mailbox.schedulerStatus, mailboxIdle)
+	atomic.StoreInt32(&m.schedulerStatus, mailboxIdle)
 
 	// check if there are still messages to process (sent after the message loop ended)
-	if atomic.SwapInt32(&mailbox.hasMoreMessages, mailboxHasNoMessages) == mailboxHasMoreMessages {
+	if atomic.SwapInt32(&m.hasMoreMessages, mailboxHasNoMessages) == mailboxHasMoreMessages {
 		// try setting the mailbox back to running
-		if atomic.CompareAndSwapInt32(&mailbox.schedulerStatus, mailboxIdle, mailboxRunning) {
+		if atomic.CompareAndSwapInt32(&m.schedulerStatus, mailboxIdle, mailboxRunning) {
 			goto process
 		}
 	}
 }
 
-func newEndpointWriterMailbox(batchSize, initialSize int) actor.MailboxProducer {
+func (m *endpointWriterMailbox) run() {
+	var msg interface{}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Debug("[ACTOR] Recovering")
+			m.invoker.EscalateFailure(r, msg)
+		}
+	}()
 
-	return func() actor.Mailbox {
+	for {
+		// keep processing system messages until queue is empty
+		if msg = m.systemMailbox.Pop(); msg != nil {
+			switch msg.(type) {
+			case *mailbox.SuspendMailbox:
+				m.suspended = true
+			case *mailbox.ResumeMailbox:
+				m.suspended = false
+			default:
+				m.invoker.InvokeSystemMessage(msg)
+			}
+
+			continue
+		}
+
+		// didn't process a system message, so break until we are resumed
+		if m.suspended {
+			return
+		}
+
+		var ok bool
+		if msg, ok = m.userMailbox.PopMany(int64(m.batchSize)); ok {
+			m.invoker.InvokeUserMessage(msg)
+		} else {
+			return
+		}
+
+		runtime.Gosched()
+	}
+}
+
+func newEndpointWriterMailbox(batchSize, initialSize int) mailbox.Producer {
+	return func(invoker mailbox.MessageInvoker, dispatcher mailbox.Dispatcher) mailbox.Inbound {
 		userMailbox := goring.New(int64(initialSize))
-		systemMailbox := lfqueue.NewLockfreeQueue()
-		mailbox := endpointWriterMailbox{
+		systemMailbox := mpsc.New()
+		return &endpointWriterMailbox{
 			userMailbox:     userMailbox,
 			systemMailbox:   systemMailbox,
 			hasMoreMessages: mailboxHasNoMessages,
 			schedulerStatus: mailboxIdle,
 			batchSize:       batchSize,
+			invoker:         invoker,
+			dispatcher:      dispatcher,
 		}
-		return &mailbox
 	}
 }
 
-func (mailbox *endpointWriterMailbox) RegisterHandlers(invoker actor.MessageInvoker, dispatcher actor.Dispatcher) {
-	mailbox.invoker = invoker
-	mailbox.dispatcher = dispatcher
+func (m *endpointWriterMailbox) Start() {
 }

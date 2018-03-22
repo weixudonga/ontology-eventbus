@@ -1,53 +1,122 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package actor
 
 import (
-	"log"
 	"strings"
+	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
-//Tell a message to a given PID
-func (pid *PID) Tell(message interface{}) {
-	ref, _ := ProcessRegistry.Get(pid)
-	ref.SendUserMessage(pid, message, nil)
+type PID struct {
+	Address string
+	Id      string
+	p       *Process
 }
 
-//Ask a message to a given PID
-func (pid *PID) Request(message interface{}, respondTo *PID) {
-	ref, _ := ProcessRegistry.Get(pid)
-	ref.SendUserMessage(pid, message, respondTo)
-}
+/*
+func (m *PID) MarshalJSONPB(*jsonpb.Marshaler) ([]byte, error) {
+	str := fmt.Sprintf("{\"Address\":\"%v\", \"Id\":\"%v\"}", m.Address, m.Id)
+	return []byte(str), nil
+}*/
 
-//RequestFuture sends a message to a given PID and returns a Future
-func (pid *PID) RequestFuture(message interface{}, timeout time.Duration) *Future {
-	ref, ok := ProcessRegistry.Get(pid)
-	if !ok {
-		log.Printf("[ACTOR] RequestFuture for missing local PID '%v'", pid.String())
+func (pid *PID) ref() Process {
+	p := (*Process)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&pid.p))))
+	if p != nil {
+		if l, ok := (*p).(*localProcess); ok && atomic.LoadInt32(&l.dead) == 1 {
+			atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&pid.p)), nil)
+		} else {
+			return *p
+		}
 	}
 
+	ref, exists := ProcessRegistry.Get(pid)
+	if exists {
+		atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&pid.p)), unsafe.Pointer(&ref))
+	}
+
+	return ref
+}
+
+// Tell sends a messages asynchronously to the PID
+func (pid *PID) Tell(message interface{}) {
+	pid.ref().SendUserMessage(pid, message)
+}
+
+// Request sends a messages asynchronously to the PID. The actor may send a response back via respondTo, which is
+// available to the receiving actor via Context.Sender
+func (pid *PID) Request(message interface{}, respondTo *PID) {
+	env := &MessageEnvelope{
+		Message: message,
+		Header:  nil,
+		Sender:  respondTo,
+	}
+	pid.ref().SendUserMessage(pid, env)
+}
+
+// RequestFuture sends a message to a given PID and returns a Future
+func (pid *PID) RequestFuture(message interface{}, timeout time.Duration) *Future {
 	future := NewFuture(timeout)
-	ref.SendUserMessage(pid, message, future.PID())
+	env := &MessageEnvelope{
+		Message: message,
+		Header:  nil,
+		Sender:  future.PID(),
+	}
+	pid.ref().SendUserMessage(pid, env)
 	return future
 }
 
-func (pid *PID) sendSystemMessage(message SystemMessage) {
-	ref, _ := ProcessRegistry.Get(pid)
-	ref.SendSystemMessage(pid, message)
+func (pid *PID) sendSystemMessage(message interface{}) {
+	pid.ref().SendSystemMessage(pid, message)
 }
 
 func (pid *PID) StopFuture() *Future {
 	future := NewFuture(10 * time.Second)
 
-	pid.sendSystemMessage(&Watch{Watcher: future.PID()})
+	pid.sendSystemMessage(&Watch{Watcher: future.pid})
 	pid.Stop()
 
 	return future
 }
 
+func (pid *PID) GracefulStop() {
+	pid.StopFuture().Wait()
+}
+
 //Stop the given PID
 func (pid *PID) Stop() {
-	ref, _ := ProcessRegistry.Get(pid)
-	ref.Stop(pid)
+	pid.ref().Stop(pid)
 }
 
 func pidFromKey(key string, p *PID) {
@@ -68,11 +137,10 @@ func (pid *PID) key() string {
 	return pid.Address + "#" + pid.Id
 }
 
-func (pid *PID) Empty() bool {
-	return pid.Address == "" && pid.Id == ""
-}
-
 func (pid *PID) String() string {
+	if pid == nil {
+		return "nil"
+	}
 	return pid.Address + "/" + pid.Id
 }
 

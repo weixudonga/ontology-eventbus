@@ -1,3 +1,35 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package actor
 
 import (
@@ -15,13 +47,17 @@ type ProcessRegistryValue struct {
 
 var (
 	localAddress = "nonhost"
-
-	ProcessRegistry = &ProcessRegistryValue{
-		Address:   localAddress,
-		LocalPIDs: cmap.New(),
-	}
 )
 
+// ProcessRegistry is a registry of all active processes.
+//
+// NOTE: This should only be used for advanced scenarios
+var ProcessRegistry = &ProcessRegistryValue{
+	Address:   localAddress,
+	LocalPIDs: cmap.New(),
+}
+
+// An AddressResolver is used to resolve remote actors
 type AddressResolver func(*PID) (Process, bool)
 
 func (pr *ProcessRegistryValue) RegisterAddressResolver(handler AddressResolver) {
@@ -56,18 +92,17 @@ func (pr *ProcessRegistryValue) NextId() string {
 }
 
 func (pr *ProcessRegistryValue) Add(process Process, id string) (*PID, bool) {
-
-	pid := PID{
+	return &PID{
 		Address: pr.Address,
 		Id:      id,
-	}
-
-	absent := pr.LocalPIDs.SetIfAbsent(pid.Id, process)
-	return &pid, absent
+	}, pr.LocalPIDs.SetIfAbsent(id, process)
 }
 
 func (pr *ProcessRegistryValue) Remove(pid *PID) {
-	pr.LocalPIDs.Remove(pid.Id)
+	ref, _ := pr.LocalPIDs.Pop(pid.Id)
+	if l, ok := ref.(*localProcess); ok {
+		atomic.StoreInt32(&l.dead, 1)
+	}
 }
 
 func (pr *ProcessRegistryValue) Get(pid *PID) (Process, bool) {

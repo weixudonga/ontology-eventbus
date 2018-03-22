@@ -1,68 +1,78 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package actor
 
-type Directive int
+import "github.com/ontio/ontology-eventbus/eventstream"
 
-const (
-	ResumeDirective Directive = iota
-	RestartDirective
-	StopDirective
-	EscalateDirective
-)
+// DeciderFunc is a function which is called by a SupervisorStrategy
+type DeciderFunc func(reason interface{}) Directive
 
-type Decider func(child *PID, cause interface{}) Directive
-
-//TODO: as we dont allow remote children or remote SupervisionStrategy
-//Instead of letting the parent keep track of child restart stats.
-//this info could actually go into each actor, sending it back to the parent as part of the Failure message
+//SupervisorStrategy is an interface that decides how to handle failing child actors
 type SupervisorStrategy interface {
-	HandleFailure(supervisor Supervisor, child *PID, cause interface{})
+	HandleFailure(supervisor Supervisor, child *PID, rs *RestartStatistics, reason interface{}, message interface{})
 }
 
-type OneForOneStrategy struct {
-	maxNrOfRetries              int
-	withinTimeRangeMilliseconds int
-	decider                     Decider
-}
-
+//Supervisor is an interface that is used by the SupervisorStrategy to manage child actor lifecycle
 type Supervisor interface {
 	Children() []*PID
-	EscalateFailure(who *PID, reason interface{})
+	EscalateFailure(reason interface{}, message interface{})
+	RestartChildren(pids ...*PID)
+	StopChildren(pids ...*PID)
+	ResumeChildren(pids ...*PID)
 }
 
-func (strategy *OneForOneStrategy) HandleFailure(supervisor Supervisor, child *PID, reason interface{}) {
-	directive := strategy.decider(child, reason)
-
-	switch directive {
-	case ResumeDirective:
-		//resume the failing child
-		child.sendSystemMessage(resumeMailboxMessage)
-	case RestartDirective:
-		//restart the failing child
-		child.sendSystemMessage(restartMessage)
-	case StopDirective:
-		//stop the failing child
-		child.Stop()
-	case EscalateDirective:
-		//send failure to parent
-		//supervisor mailbox
-		supervisor.EscalateFailure(child, reason)
-	}
+func logFailure(child *PID, reason interface{}, directive Directive) {
+	eventstream.Publish(&SupervisorEvent{
+		Child:     child,
+		Reason:    reason,
+		Directive: directive,
+	})
 }
 
-func NewOneForOneStrategy(maxNrOfRetries int, withinTimeRangeMilliseconds int, decider Decider) SupervisorStrategy {
-	return &OneForOneStrategy{
-		maxNrOfRetries:              maxNrOfRetries,
-		withinTimeRangeMilliseconds: withinTimeRangeMilliseconds,
-		decider:                     decider,
-	}
-}
-
-func DefaultDecider(child *PID, reason interface{}) Directive {
+//DefaultDecider is a decider that will always restart the failing child actor
+func DefaultDecider(_ interface{}) Directive {
 	return RestartDirective
 }
 
-var defaultSupervisionStrategy = NewOneForOneStrategy(10, 3000, DefaultDecider)
+var (
+	defaultSupervisionStrategy    = NewOneForOneStrategy(10, 0, DefaultDecider)
+	restartingSupervisionStrategy = NewRestartingStrategy()
+)
 
-func DefaultSupervisionStrategy() SupervisorStrategy {
+func DefaultSupervisorStrategy() SupervisorStrategy {
 	return defaultSupervisionStrategy
+}
+
+func RestartingSupervisorStrategy() SupervisorStrategy {
+	return restartingSupervisionStrategy
 }

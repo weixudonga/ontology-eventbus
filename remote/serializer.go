@@ -1,49 +1,66 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package remote
 
-import (
-	"log"
-	"reflect"
+var DefaultSerializerID int32 = 0
+var serializers []Serializer
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	proto "github.com/gogo/protobuf/proto"
-	//proto "github.com/golang/protobuf/proto"
-)
-
-func serialize(message proto.Message, target *actor.PID, sender *actor.PID) (*MessageEnvelope, error) {
-	typeName := proto.MessageName(message)
-	ensureGoGo(typeName)
-	bytes, err := proto.Marshal(message)
-	if err != nil {
-		return nil, err
-	}
-	envelope := &MessageEnvelope{
-		TypeName:    typeName,
-		MessageData: bytes,
-		Target:      target,
-		Sender:      sender,
-	}
-
-	return envelope, nil
+func init() {
+	RegisterSerializer(newProtoSerializer())
+	RegisterSerializer(newJsonSerializer())
 }
 
-func deserialize(message *MessageEnvelope) proto.Message {
-
-	ensureGoGo(message.TypeName)
-	t1 := proto.MessageType(message.TypeName)
-	if t1 == nil {
-		log.Fatalf("[REMOTING] Unknown message type name '%v'", message.TypeName)
-	}
-	t := t1.Elem()
-
-	intPtr := reflect.New(t)
-	instance := intPtr.Interface().(proto.Message)
-	proto.Unmarshal(message.MessageData, instance)
-
-	return instance
+func RegisterSerializerAsDefault(serializer Serializer) {
+	serializers = append(serializers, serializer)
+	DefaultSerializerID = int32(len(serializers) - 1)
 }
 
-func ensureGoGo(typeName string) {
-	if typeName == "" {
-		log.Fatalf("[REMOTING] Message type name is empty string, make sure you have generated the Proto contacts with GOGO Proto: github.com/gogo/protobuf/proto")
-	}
+func RegisterSerializer(serializer Serializer) {
+	serializers = append(serializers, serializer)
+}
+
+type Serializer interface {
+	Serialize(msg interface{}) ([]byte, error)
+	Deserialize(typeName string, bytes []byte) (interface{}, error)
+	GetTypeName(msg interface{}) (string, error)
+}
+
+func Serialize(message interface{}, serializerID int32) ([]byte, string, error) {
+	res, err := serializers[serializerID].Serialize(message)
+	typeName, err := serializers[serializerID].GetTypeName(message)
+	return res, typeName, err
+}
+
+func Deserialize(message []byte, typeName string, serializerID int32) (interface{}, error) {
+	return serializers[serializerID].Deserialize(typeName, message)
 }

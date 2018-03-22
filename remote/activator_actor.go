@@ -1,11 +1,44 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package remote
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/common/log"
 )
 
 var (
@@ -14,14 +47,20 @@ var (
 )
 
 func spawnActivatorActor() {
-	activatorPid = actor.SpawnNamed(actor.FromProducer(newActivatorActor()), "activator")
+	props := actor.FromProducer(newActivatorActor()).WithGuardian(actor.RestartingSupervisorStrategy())
+	activatorPid, _ = actor.SpawnNamed(props, "activator")
+}
+
+func stopActivatorActor() {
+	activatorPid.GracefulStop()
 }
 
 //Register a known actor props by name
-func Register(kind string, props actor.Props) {
-	nameLookup[kind] = props
+func Register(kind string, props *actor.Props) {
+	nameLookup[kind] = *props
 }
 
+//GetKnownKinds returns a slice of known actor "kinds"
 func GetKnownKinds() []string {
 	keys := make([]string, 0, len(nameLookup))
 	for k := range nameLookup {
@@ -33,12 +72,28 @@ func GetKnownKinds() []string {
 type activator struct {
 }
 
+//ErrActivatorUnavailable : this error will not panic the Activator.
+//It simply tells Partition this Activator is not available
+//Partition will then find next available Activator to spawn
+var ErrActivatorUnavailable = &ActivatorError{ResponseStatusCodeUNAVAILABLE.ToInt32(), true}
+
+type ActivatorError struct {
+	Code       int32
+	DoNotPanic bool
+}
+
+func (e *ActivatorError) Error() string {
+	return fmt.Sprint(e.Code)
+}
+
+//ActivatorForAddress returns a PID for the activator at the given address
 func ActivatorForAddress(address string) *actor.PID {
 	pid := actor.NewPID(address, "activator")
 	return pid
 }
 
-func SpawnFuture(address string, name string, kind string, timeout time.Duration) *actor.Future {
+//SpawnFuture spawns a remote actor and returns a Future that completes once the actor is started
+func SpawnFuture(address, name, kind string, timeout time.Duration) *actor.Future {
 	activator := ActivatorForAddress(address)
 	f := activator.RequestFuture(&ActorPidRequest{
 		Name: name,
@@ -47,24 +102,26 @@ func SpawnFuture(address string, name string, kind string, timeout time.Duration
 	return f
 }
 
-func Spawn(address string, kind string, timeout time.Duration) (*actor.PID, error) {
+//Spawn spawns a remote actor of a given type at a given address
+func Spawn(address, kind string, timeout time.Duration) (*ActorPidResponse, error) {
 	return SpawnNamed(address, "", kind, timeout)
 }
 
-func SpawnNamed(address string, name string, kind string, timeout time.Duration) (*actor.PID, error) {
+//SpawnNamed spawns a named remote actor of a given type at a given address
+func SpawnNamed(address, name, kind string, timeout time.Duration) (*ActorPidResponse, error) {
 	activator := ActivatorForAddress(address)
 	res, err := activator.RequestFuture(&ActorPidRequest{
 		Name: name,
 		Kind: kind,
 	}, timeout).Result()
 	if err != nil {
-		return nil, errors.New("[REMOTING] Remote activating timed out")
+		return nil, err
 	}
 	switch msg := res.(type) {
 	case *ActorPidResponse:
-		return msg.Pid, nil
+		return msg, nil
 	default:
-		return nil, errors.New("[REMOTING] Unknown response when remote activating")
+		return nil, errors.New("remote: Unknown response when remote activating")
 	}
 }
 
@@ -77,7 +134,7 @@ func newActivatorActor() actor.Producer {
 func (*activator) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		log.Println("[REMOTING] Started Activator")
+		log.Debug("Started Activator")
 	case *ActorPidRequest:
 		props := nameLookup[msg.Kind]
 		name := msg.Name
@@ -87,12 +144,35 @@ func (*activator) Receive(context actor.Context) {
 			name = actor.ProcessRegistry.NextId()
 		}
 
-		pid := actor.SpawnNamed(props, "Remote$"+msg.Name)
-		response := &ActorPidResponse{
-			Pid: pid,
+		pid, err := actor.SpawnNamed(&props, "Remote$"+name)
+
+		if err == nil {
+			response := &ActorPidResponse{Pid: pid}
+			context.Respond(response)
+		} else if err == actor.ErrNameExists {
+			response := &ActorPidResponse{
+				Pid:        pid,
+				StatusCode: ResponseStatusCodePROCESSNAMEALREADYEXIST.ToInt32(),
+			}
+			context.Respond(response)
+		} else if aErr, ok := err.(*ActivatorError); ok {
+			response := &ActorPidResponse{
+				StatusCode: aErr.Code,
+			}
+			context.Respond(response)
+			if !aErr.DoNotPanic {
+				panic(err)
+			}
+		} else {
+			response := &ActorPidResponse{
+				StatusCode: ResponseStatusCodeERROR.ToInt32(),
+			}
+			context.Respond(response)
+			panic(err)
 		}
-		context.Respond(response)
+	case actor.SystemMessage, actor.AutoReceiveMessage:
+		//ignore
 	default:
-		log.Printf("[CLUSTER] Activator got unknown message %+v", msg)
+		log.Error("Activator received unknown message!")
 	}
 }

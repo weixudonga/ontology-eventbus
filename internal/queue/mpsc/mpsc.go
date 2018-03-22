@@ -1,3 +1,35 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 // Package mpsc provides an efficient implementation of a multi-producer, single-consumer lock-free queue.
 //
 // The Push function is safe to call from multiple goroutines. The Pop and Empty APIs must only be
@@ -19,13 +51,13 @@ type node struct {
 
 type Queue struct {
 	head, tail *node
-	stub       node
 }
 
 func New() *Queue {
 	q := &Queue{}
-	q.head = &q.stub
-	q.tail = q.head
+	stub := &node{}
+	q.head = stub
+	q.tail = stub
 	return q
 }
 
@@ -49,7 +81,9 @@ func (q *Queue) Pop() interface{} {
 	next := (*node)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&tail.next)))) // acquire
 	if next != nil {
 		q.tail = next
-		return next.val
+		v := next.val
+		next.val = nil
+		return v
 	}
 	return nil
 }

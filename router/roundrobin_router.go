@@ -1,9 +1,41 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package router
 
 import (
 	"sync/atomic"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ontio/ontology-eventbus/actor"
 )
 
 type roundRobinGroupRouter struct {
@@ -29,17 +61,17 @@ func (state *roundRobinState) GetRoutees() *actor.PIDSet {
 	return state.routees
 }
 
-func (state *roundRobinState) RouteMessage(message interface{}, sender *actor.PID) {
+func (state *roundRobinState) RouteMessage(message interface{}) {
 	pid := roundRobinRoutee(&state.index, state.values)
-	pid.Request(message, sender)
+	pid.Tell(message)
 }
 
-func NewRoundRobinPool(size int) actor.Props {
-	return actor.FromSpawn(spawner(&roundRobinPoolRouter{PoolRouter{PoolSize: size}}))
+func NewRoundRobinPool(size int) *actor.Props {
+	return actor.FromSpawnFunc(spawner(&roundRobinPoolRouter{PoolRouter{PoolSize: size}}))
 }
 
-func NewRoundRobinGroup(routees ...*actor.PID) actor.Props {
-	return actor.FromSpawn(spawner(&roundRobinGroupRouter{GroupRouter{Routees: actor.NewPIDSet(routees...)}}))
+func NewRoundRobinGroup(routees ...*actor.PID) *actor.Props {
+	return actor.FromSpawnFunc(spawner(&roundRobinGroupRouter{GroupRouter{Routees: actor.NewPIDSet(routees...)}}))
 }
 
 func (config *roundRobinPoolRouter) CreateRouterState() Interface {
@@ -52,6 +84,10 @@ func (config *roundRobinGroupRouter) CreateRouterState() Interface {
 
 func roundRobinRoutee(index *int32, routees []actor.PID) actor.PID {
 	i := int(atomic.AddInt32(index, 1))
+	if i < 0 {
+		*index = 0
+		i = 0
+	}
 	mod := len(routees)
 	routee := routees[i%mod]
 	return routee

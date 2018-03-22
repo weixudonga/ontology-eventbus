@@ -1,109 +1,137 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package actor
 
-//Props or properties of an actor, it defines how the actor should be created
+import "github.com/ontio/ontology-eventbus/mailbox"
+
+type InboundMiddleware func(next ActorFunc) ActorFunc
+type OutboundMiddleware func(next SenderFunc) SenderFunc
+
+// Props represents configuration to define how an actor should be created
 type Props struct {
 	actorProducer       Producer
-	mailboxProducer     MailboxProducer
+	mailboxProducer     mailbox.Producer
+	guardianStrategy    SupervisorStrategy
 	supervisionStrategy SupervisorStrategy
-	receivePlugins      []Receive
-	dispatcher          Dispatcher
-	spawner             Spawner
+	inboundMiddleware   []InboundMiddleware
+	outboundMiddleware  []OutboundMiddleware
+	dispatcher          mailbox.Dispatcher
+	spawner             SpawnFunc
 }
 
-func (props Props) Dispatcher() Dispatcher {
+func (props *Props) getDispatcher() mailbox.Dispatcher {
 	if props.dispatcher == nil {
 		return defaultDispatcher
 	}
 	return props.dispatcher
 }
 
-func (props Props) ProduceActor() Actor {
-	return props.actorProducer()
-}
-
-func (props Props) Supervisor() SupervisorStrategy {
+func (props *Props) getSupervisor() SupervisorStrategy {
 	if props.supervisionStrategy == nil {
 		return defaultSupervisionStrategy
 	}
 	return props.supervisionStrategy
 }
 
-func (props Props) ProduceMailbox() Mailbox {
+func (props *Props) produceMailbox(invoker mailbox.MessageInvoker, dispatcher mailbox.Dispatcher) mailbox.Inbound {
 	if props.mailboxProducer == nil {
-		return defaultMailboxProducer()
+		return defaultMailboxProducer(invoker, dispatcher)
 	}
-	return props.mailboxProducer()
+	return props.mailboxProducer(invoker, dispatcher)
 }
 
-func (props Props) spawn(id string, parent *PID) *PID {
+func (props *Props) spawn(id string, parent *PID) (*PID, error) {
 	if props.spawner != nil {
 		return props.spawner(id, props, parent)
 	}
 	return DefaultSpawner(id, props, parent)
 }
 
-func (props Props) WithReceivers(plugin ...Receive) Props {
-	//pass by value, we only modify the copy
-	props.receivePlugins = append(props.receivePlugins, plugin...)
+// Assign one or more middlewares to the props
+func (props *Props) WithMiddleware(middleware ...InboundMiddleware) *Props {
+	props.inboundMiddleware = append(props.inboundMiddleware, middleware...)
 	return props
 }
 
-func (props Props) WithMailbox(mailbox MailboxProducer) Props {
-	//pass by value, we only modify the copy
+func (props *Props) WithOutboundMiddleware(middleware ...OutboundMiddleware) *Props {
+	props.outboundMiddleware = append(props.outboundMiddleware, middleware...)
+	return props
+}
+
+//WithMailbox assigns the desired mailbox producer to the props
+func (props *Props) WithMailbox(mailbox mailbox.Producer) *Props {
 	props.mailboxProducer = mailbox
 	return props
 }
 
-func (props Props) WithSupervisor(supervisor SupervisorStrategy) Props {
-	//pass by value, we only modify the copy
+//WithGuardian assigns a guardian strategy to the props
+func (props *Props) WithGuardian(guardian SupervisorStrategy) *Props {
+	props.guardianStrategy = guardian
+	return props
+}
+
+//WithSupervisor assigns a supervision strategy to the props
+func (props *Props) WithSupervisor(supervisor SupervisorStrategy) *Props {
 	props.supervisionStrategy = supervisor
 	return props
 }
 
-func (props Props) WithDispatcher(dispatcher Dispatcher) Props {
-	//pass by value, we only modify the copy
+//WithDispatcher assigns a dispatcher to the props
+func (props *Props) WithDispatcher(dispatcher mailbox.Dispatcher) *Props {
 	props.dispatcher = dispatcher
 	return props
 }
 
-func (props Props) WithSpawn(spawn Spawner) Props {
+//WithSpawnFunc assigns a custom spawn func to the props, this is mainly for internal usage
+func (props *Props) WithSpawnFunc(spawn SpawnFunc) *Props {
 	props.spawner = spawn
 	return props
 }
 
-func (props Props) WithFunc(receive Receive) Props {
-	props.actorProducer = makeProducerFromInstance(receive)
+//WithFunc assigns a receive func to the props
+func (props *Props) WithFunc(f ActorFunc) *Props {
+	props.actorProducer = func() Actor { return f }
 	return props
 }
 
-func (props Props) WithInstance(a Actor) Props {
-	props.actorProducer = makeProducerFromInstance(a)
-	return props
-}
-
-func (props Props) WithProducer(p Producer) Props {
+//WithProducer assigns a actor producer to the props
+func (props *Props) WithProducer(p Producer) *Props {
 	props.actorProducer = p
 	return props
 }
 
-func FromProducer(actorProducer Producer) Props {
-	return Props{actorProducer: actorProducer}
-}
-
-func FromFunc(receive Receive) Props {
-	return FromInstance(receive)
-}
-
-func FromSpawn(spawn Spawner) Props {
-	return Props{spawner: spawn}
-}
-
-func FromInstance(template Actor) Props {
-	return Props{actorProducer: makeProducerFromInstance(template)}
-}
-
-func makeProducerFromInstance(a Actor) Producer {
-	return func() Actor {
-		return a
-	}
+//Deprecated: WithInstance is deprecated.
+func (props *Props) WithInstance(a Actor) *Props {
+	props.actorProducer = makeProducerFromInstance(a)
+	return props
 }

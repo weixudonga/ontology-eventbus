@@ -1,24 +1,66 @@
+/****************************************************
+Copyright 2018 The ont-eventbus Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
+
+
+/***************************************************
+Copyright 2016 https://github.com/AsynkronIT/protoactor-go
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*****************************************************/
 package remote
 
 import (
 	"io/ioutil"
-	"log"
+	slog "log"
 	"net"
+	"os"
+	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-
+	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/common/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	"fmt"
+)
+
+var (
+	s         *grpc.Server
+	edpReader *endpointReader
 )
 
 // Start the remote server
 func Start(address string, options ...RemotingOption) {
-	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
+	grpclog.SetLogger(slog.New(ioutil.Discard, "", 0))
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Fatalf("[REMOTING] failed to listen: %v", err)
+		log.Error("failed to listen",err.Error())
+		os.Exit(1)
 	}
 	config := defaultRemoteConfig()
+	fmt.Println(config.endpointWriterBatchSize)
 	for _, option := range options {
 		option(config)
 	}
@@ -28,11 +70,39 @@ func Start(address string, options ...RemotingOption) {
 	actor.ProcessRegistry.Address = address
 
 	spawnActivatorActor()
-	spawnEndpointManager(config)
-	subscribeEndpointManager()
+	startEndpointManager(config)
 
-	s := grpc.NewServer(config.serverOptions...)
-	RegisterRemotingServer(s, &server{})
-	log.Printf("[REMOTING] Starting Proto.Actor server on %v", address)
+	s = grpc.NewServer(config.serverOptions...)
+	edpReader = &endpointReader{}
+	RegisterRemotingServer(s, edpReader)
+	log.Info("Starting Proto.Actor server", string(address))
 	go s.Serve(lis)
+}
+
+func Shutdown(graceful bool) {
+	if graceful {
+		edpReader.suspend(true)
+		stopEndpointManager()
+		stopActivatorActor()
+
+		//For some reason GRPC doesn't want to stop
+		//Setup timeout as walkaround but need to figure out in the future.
+		//TODO: grpc not stopping
+		c := make(chan bool, 1)
+		go func() {
+			s.GracefulStop()
+			c <- true
+		}()
+
+		select {
+		case <-c:
+			log.Info("Stopped Proto.Actor server")
+		case <-time.After(time.Second * 10):
+			s.Stop()
+			log.Info("Stopped Proto.Actor server timeout")
+		}
+	} else {
+		s.Stop()
+		log.Info("Killed Proto.Actor server")
+	}
 }
