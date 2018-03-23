@@ -19,7 +19,14 @@ var (
 )
 
 func init() {
-	l := &ioLogger{c: make(chan Event, 100), out: os.Stderr}
+	logFile, err := fileOpen("./ActorLog/")
+	writers := []io.Writer{logFile, os.Stderr}
+	fileAndStdoutWrite := io.MultiWriter(writers...)
+	if err != nil {
+		fmt.Println("error: open log file failed")
+		os.Exit(1)
+	}
+	l := &ioLogger{c: make(chan Event, 100), out: fileAndStdoutWrite}
 	sub = Subscribe(func(evt Event) {
 		l.c <- evt
 	})
@@ -31,6 +38,28 @@ func (l *ioLogger) listenEvent() {
 		e := <-l.c
 		l.writeEvent(e)
 	}
+}
+
+func fileOpen(path string) (*os.File, error) {
+	if fi, err := os.Stat(path); err == nil {
+		if !fi.IsDir() {
+			return nil, fmt.Errorf("open %s: not a directory", path)
+		}
+	} else if os.IsNotExist(err) {
+		if err := os.MkdirAll(path, 0766); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
+
+	var currenttime string = time.Now().Format("2006-01-02_15.04.05")
+
+	logfile, err := os.OpenFile(path + currenttime + "_LOG.log", os.O_RDWR | os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
+	}
+	return logfile, nil
 }
 
 // Cheap integer to fixed-width decimal ASCII.  Give a negative width to avoid zero-padding.
