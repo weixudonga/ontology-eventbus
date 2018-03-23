@@ -36,7 +36,7 @@ import (
 	"runtime"
 	"sync/atomic"
 
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/internal/queue/goring"
 	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
 	"github.com/ontio/ontology-eventbus/mailbox"
@@ -102,7 +102,7 @@ func (m *endpointWriterMailbox) run() {
 	var msg interface{}
 	defer func() {
 		if r := recover(); r != nil {
-			log.Debug("[ACTOR] Recovering")
+			plog.Debug("[ACTOR] Recovering", log.Object("actor", m.invoker), log.Object("reason", r), log.Stack())
 			m.invoker.EscalateFailure(r, msg)
 		}
 	}()

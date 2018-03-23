@@ -35,7 +35,7 @@ package zmqremote
 import (
 	"time"
 
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/actor"
 	zmq "github.com/pebbe/zmq4"
 )
@@ -54,7 +54,7 @@ func (s *endpointReader) Receive(stream *zmq.Socket) error {
 
 		batchstr, err := stream.Recv(0)
 		if err != nil {
-			log.Error("iEndpointReader failed to recieve.......", err.Error())
+			plog.Error("iEndpointReader failed to recieve.......", log.Error(err))
 			return err
 		}
 
@@ -74,7 +74,7 @@ func (s *endpointReader) Receive(stream *zmq.Socket) error {
 			pid := targets[envelope.Target]
 			message, err := Deserialize(envelope.MessageData, batch.TypeNames[envelope.TypeId], envelope.SerializerId)
 			if err != nil {
-				log.Error("EndpointReader failed to deserialize........", err)
+				plog.Debug("EndpointReader failed to deserialize........", log.Error(err))
 				return err
 			}
 			//if message is system message send it as sysmsg instead of usermsg

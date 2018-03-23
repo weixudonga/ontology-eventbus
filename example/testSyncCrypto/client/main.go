@@ -42,7 +42,6 @@ import (
 	"github.com/ontio/ontology-eventbus/zmqremote"
 
 	"runtime"
-	"github.com/ontio/ontology-eventbus/common/log"
 )
 
 const loop = 10000
@@ -51,7 +50,6 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	log.Init()
 	zmqremote.Start("127.0.0.1:9081")
 
 	var vrftimeSum int64

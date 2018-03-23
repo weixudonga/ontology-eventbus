@@ -34,7 +34,6 @@ package main
 
 import (
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/common/log"
 	"github.com/ontio/ontology-eventbus/zmqremote"
 
 	"sync"
@@ -76,8 +75,6 @@ func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
 
 func main() {
 
-	log.Init()
-	log.Debug("test")
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 

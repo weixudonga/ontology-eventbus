@@ -394,7 +394,6 @@ message MsgData {
 server.go
 ```go
 func main() {
-	log.Init()
 	log.Debug("test")
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
@@ -431,7 +430,6 @@ client.go
 ```go
 func main() {
 
-	log.Init()
 	log.Debug("test")
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
@@ -473,7 +471,6 @@ func main() {
 node2/main.go
 ```go
 func main() {
-	log.Init()
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
@@ -530,7 +527,6 @@ func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
 }
 
 func main() {
-	log.Init()
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 

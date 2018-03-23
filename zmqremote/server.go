@@ -36,7 +36,7 @@ import (
 
 	"github.com/ontio/ontology-eventbus/actor"
 	zmq "github.com/pebbe/zmq4"
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 var (
@@ -58,9 +58,10 @@ func Start(address string) {
 	conn, _ = zmq.NewSocket(zmq.ROUTER)
 	err := conn.Bind("tcp://" + address)
 	if err != nil {
-		log.Error("Connect bind error.......", err)
+		plog.Error("failed to Bind", log.Error(err))
 	}
 	//fmt.Println("after bind " + address)
+	plog.Info("Starting Proto.Actor server", log.String("address", address))
 	go func() {
 		edpReader.Receive(conn)
 	}()

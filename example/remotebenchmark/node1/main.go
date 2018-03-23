@@ -35,7 +35,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/ontio/ontology-eventbus/common/log"
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
 	"github.com/ontio/ontology-eventbus/remote"
@@ -78,7 +77,6 @@ func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
 }
 
 func main() {
-	log.Init()
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 

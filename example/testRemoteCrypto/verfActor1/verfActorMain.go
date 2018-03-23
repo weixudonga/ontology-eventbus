@@ -37,7 +37,6 @@ import (
 	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
 	"runtime"
 	"github.com/ontio/ontology-eventbus/remote"
-	"github.com/ontio/ontology-eventbus/common/log"
 	"time"
 	"github.com/ontio/ontology-eventbus/mailbox"
 )
@@ -49,7 +48,6 @@ func main()  {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	log.Init()
 	remote.Start("127.0.0.1:9081")
 	vfprops := actor.FromProducer(func() actor.Actor { return &commons.VerifyActor{} }).WithMailbox(mailbox.Bounded(100))
 	actor.SpawnNamed(vfprops, "verify1")

@@ -35,7 +35,7 @@ package zmqremote
 import (
 	"time"
 
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/eventstream"
 	zmq "github.com/pebbe/zmq4"
@@ -61,21 +61,23 @@ type endpointWriter struct {
 func (state *endpointWriter) initialize() {
 	err := state.initializeInternal()
 	if err != nil {
+		plog.Error("EndpointWriter failed to connect", log.String("address", state.address), log.Error(err))
 		time.Sleep(2 * time.Second)
 		panic(err)
 	}
 }
 
 func (state *endpointWriter) initializeInternal() error {
-
+	plog.Info("Started EndpointWriter", log.String("address", state.address))
+	plog.Info("EndpointWriter connecting", log.String("address", state.address))
 	state.conn, _ = zmq.NewSocket(zmq.DEALER)
 	err := state.conn.Connect("tcp://" + state.address)
 	if err != nil {
-		log.Error("error while connect ", state.address, err.Error())
 		return err
 	}
 
 	go func() {
+		plog.Info("EndpointWriter connected", log.String("address", state.address))
 		connected := &EndpointConnectedEvent{Address: state.address}
 		eventstream.Publish(connected)
 	}()
@@ -114,7 +116,6 @@ func (state *endpointWriter) sendEnvelopes(msg []interface{}, ctx actor.Context)
 
 		bytes, typeName, err := Serialize(rd.message, serializerID)
 		if err != nil {
-			log.Error("serialize error:", err.Error())
 			panic(err)
 		}
 		typeID, typeNamesArr = addToLookup(typeNames, typeName, typeNamesArr)
@@ -170,6 +171,6 @@ func (state *endpointWriter) Receive(ctx actor.Context) {
 	case actor.SystemMessage, actor.AutoReceiveMessage:
 		//ignore
 	default:
-		log.Error("EndpointWriter received unknown message", "address", state.address)
+		plog.Error("EndpointWriter received unknown message", log.String("address", state.address), log.TypeOf("type", msg), log.Message(msg))
 	}
 }

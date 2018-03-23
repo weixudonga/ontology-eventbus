@@ -44,7 +44,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ontio/ontology-eventbus/common/log"
 	"github.com/Ontology/crypto"
 	"github.com/ontio/ontology-eventbus/example/ontCrypto/remotePerformance/messages"
 )
@@ -86,7 +85,6 @@ func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
 }
 
 func main() {
-	log.Init()
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 

@@ -37,7 +37,7 @@ import (
 
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/eventstream"
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -62,7 +62,7 @@ type endpointWriter struct {
 func (state *endpointWriter) initialize() {
 	err := state.initializeInternal()
 	if err != nil {
-		log.Error("EndpointWriter failed to connect"+err.Error())
+		plog.Error("EndpointWriter failed to connect", log.String("address", state.address), log.Error(err))
 		//Wait 2 seconds to restart and retry
 		//Replace with Exponential Backoff
 		time.Sleep(2 * time.Second)
@@ -71,8 +71,8 @@ func (state *endpointWriter) initialize() {
 }
 
 func (state *endpointWriter) initializeInternal() error {
-	log.Info("Started EndpointWriter", string(state.address))
-	log.Info("EndpointWriter connecting", string(state.address))
+	plog.Info("Started EndpointWriter", log.String("address", state.address))
+	plog.Info("EndpointWriter connecting", log.String("address", state.address))
 	conn, err := grpc.Dial(state.address, state.config.dialOptions...)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (state *endpointWriter) initializeInternal() error {
 	go func() {
 		_, err := stream.Recv()
 		if err != nil {
-			log.Info("EndpointWriter lost connection to address", string(state.address))
+			plog.Info("EndpointWriter lost connection to address", log.String("address", state.address))
 
 			//notify that the endpoint terminated
 			terminated := &EndpointTerminatedEvent{
@@ -103,7 +103,7 @@ func (state *endpointWriter) initializeInternal() error {
 		}
 	}()
 
-	log.Info("EndpointWriter connected", string(state.address))
+	plog.Info("EndpointWriter connected", log.String("address", state.address))
 	connected := &EndpointConnectedEvent{Address: state.address}
 	eventstream.Publish(connected)
 	state.stream = stream
@@ -163,7 +163,7 @@ func (state *endpointWriter) sendEnvelopes(msg []interface{}, ctx actor.Context)
 
 	if err != nil {
 		ctx.Stash()
-		log.Debug("gRPC Failed to send", string(state.address))
+		plog.Debug("gRPC Failed to send", log.String("address", state.address))
 		panic("restart it")
 	}
 }
@@ -192,6 +192,6 @@ func (state *endpointWriter) Receive(ctx actor.Context) {
 	case actor.SystemMessage, actor.AutoReceiveMessage:
 		//ignore
 	default:
-		log.Error("EndpointWriter received unknown message")
+		plog.Error("EndpointWriter received unknown message", log.String("address", state.address), log.TypeOf("type", msg), log.Message(msg))
 	}
 }

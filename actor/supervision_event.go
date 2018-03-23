@@ -34,8 +34,7 @@ package actor
 
 import (
 	"github.com/ontio/ontology-eventbus/eventstream"
-	"github.com/ontio/ontology-eventbus/common/log"
-	"fmt"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 //SupervisorEvent is sent on the EventStream when a supervisor have applied a directive to a failing child actor
@@ -52,7 +51,7 @@ var (
 func init() {
 	supervisionSubscriber = eventstream.Subscribe(func(evt interface{}) {
 		if supervisorEvent, ok := evt.(*SupervisorEvent); ok {
-			log.Debug("[SUPERVISION]", fmt.Sprintf("actor:%v", supervisorEvent.Child), fmt.Sprintf("directive:%v", supervisorEvent.Directive), fmt.Sprintf("reason:%v", supervisorEvent.Reason))
+			plog.Debug("[SUPERVISION]", log.Stringer("actor", supervisorEvent.Child), log.Stringer("directive", supervisorEvent.Directive), log.Object("reason", supervisorEvent.Reason))
 		}
 	})
 }

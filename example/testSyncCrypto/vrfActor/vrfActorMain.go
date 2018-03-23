@@ -36,7 +36,6 @@ import (
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/testSyncCrypto/commons"
 	"runtime"
-	"github.com/ontio/ontology-eventbus/common/log"
 	"fmt"
 	"github.com/ontio/ontology-eventbus/mailbox"
 	"github.com/ontio/ontology-eventbus/zmqremote"
@@ -50,7 +49,6 @@ func main()  {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	log.Init()
 	zmqremote.Start("127.0.0.1:9080")
 	vfprops := actor.FromProducer(func() actor.Actor { return &commons.VerifyActor{} }).WithMailbox(mailbox.Bounded(100))
 	_, err := actor.SpawnNamed(vfprops, "verify")

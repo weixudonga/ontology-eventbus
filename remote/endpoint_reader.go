@@ -36,7 +36,7 @@ import (
 	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -64,7 +64,7 @@ func (s *endpointReader) Receive(stream Remoting_ReceiveServer) error {
 
 		batch, err := stream.Recv()
 		if err != nil {
-			log.Debug("EndpointReader failed to read", err.Error())
+			plog.Debug("EndpointReader failed to read", log.Error(err))
 			return err
 		}
 
@@ -81,7 +81,7 @@ func (s *endpointReader) Receive(stream Remoting_ReceiveServer) error {
 			pid := targets[envelope.Target]
 			message, err := Deserialize(envelope.MessageData, batch.TypeNames[envelope.TypeId], envelope.SerializerId)
 			if err != nil {
-				log.Debug("EndpointReader failed to deserialize", err)
+				plog.Debug("EndpointReader failed to deserialize", log.Error(err))
 				return err
 			}
 			//if message is system message send it as sysmsg instead of usermsg

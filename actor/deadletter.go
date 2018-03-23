@@ -34,8 +34,7 @@ package actor
 
 import (
 	"github.com/ontio/ontology-eventbus/eventstream"
-	"github.com/ontio/ontology-eventbus/common/log"
-	"fmt"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 type deadLetterProcess struct{}
@@ -48,7 +47,7 @@ var (
 func init() {
 	deadLetterSubscriber = eventstream.Subscribe(func(msg interface{}) {
 		if deadLetter, ok := msg.(*DeadLetterEvent); ok {
-			log.Debug("[DeadLetter]:", fmt.Sprintf("%v",deadLetter))
+			plog.Debug("[DeadLetter]", log.Stringer("pid", deadLetter.PID), log.Message(deadLetter.Message), log.Stringer("sender", deadLetter.Sender))
 		}
 	})
 

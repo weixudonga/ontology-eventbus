@@ -35,9 +35,9 @@ package eventhub
 import (
 	"math/rand"
 
-	"github.com/ontio/ontology-eventbus/common/log"
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/orcaman/concurrent-map"
+	"fmt"
 )
 
 type PublishPolicy int
@@ -71,7 +71,7 @@ func (this *EventHub) Publish(event *Event) {
 	//go func() {
 	actors, ok := this.Subscribers.Get(event.Topic)
 	if !ok {
-		log.Info("no subscribers yet!")
+		fmt.Println("no subscribers yet!")
 		return
 	}
 	subscribers := actors.([]*actor.PID)
@@ -96,7 +96,7 @@ func (this *EventHub) Unsubscribe(topic string, subscriber *actor.PID) {
 
 	tmpslice, ok := this.Subscribers.Get(topic)
 	if !ok {
-		log.Debug("No subscriber on topic:%s yet.\n", topic)
+		fmt.Printf("No subscriber on topic:%s yet.\n", topic)
 		return
 	}
 	//defer this.RWMutex.Unlock()
@@ -120,7 +120,7 @@ func (this *EventHub) sendEventByPolicy(subscribers []*actor.PID, event *Event, 
 	case PUBLISH_POLICY_RANDOM:
 		length := len(subscribers)
 		if length == 0 {
-			log.Info("no subscribers yet!")
+			fmt.Printf("no subscribers yet!")
 			return
 		}
 		var i int

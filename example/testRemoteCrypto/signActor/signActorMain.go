@@ -37,7 +37,6 @@ import (
 	"runtime"
 	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
 	"github.com/ontio/ontology-eventbus/remote"
-	"github.com/ontio/ontology-eventbus/common/log"
 	"time"
 )
 
@@ -46,7 +45,6 @@ func main()  {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	log.Init()
 	remote.Start("127.0.0.1:9080")
 	signprops := actor.FromProducer(func() actor.Actor { return &commons.SignActor{} })
 	actor.SpawnNamed(signprops, "sign")

@@ -37,7 +37,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/actor"
 )
 
@@ -134,7 +134,7 @@ func newActivatorActor() actor.Producer {
 func (*activator) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		log.Debug("Started Activator")
+		plog.Debug("Started Activator")
 	case *ActorPidRequest:
 		props := nameLookup[msg.Kind]
 		name := msg.Name
@@ -173,6 +173,6 @@ func (*activator) Receive(context actor.Context) {
 	case actor.SystemMessage, actor.AutoReceiveMessage:
 		//ignore
 	default:
-		log.Error("Activator received unknown message:", fmt.Sprintf("%v", msg))
+		plog.Error("Activator received unknown message", log.TypeOf("type", msg), log.Message(msg))
 	}
 }

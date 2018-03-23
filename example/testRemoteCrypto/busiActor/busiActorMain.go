@@ -37,7 +37,6 @@ import (
 	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
 	"runtime"
 	"github.com/ontio/ontology-eventbus/remote"
-	"github.com/ontio/ontology-eventbus/common/log"
 	"github.com/ontio/ontology-eventbus/eventhub"
 	"fmt"
 	"time"
@@ -55,7 +54,6 @@ func main()  {
 	var wg sync.WaitGroup
 	var vrftimeSum int64
 	var latencySum int64
-	log.Init()
 	remote.Start("127.0.0.1:9082")
 	props := actor.FromProducer(func() actor.Actor { return &commons.BusynessActor{Datas:make(map[string][]byte), WgStop:&wg, VrftimeSum:&vrftimeSum, LatencySum:&latencySum} }).WithMailbox(mailbox.Bounded(100))
 

@@ -37,7 +37,7 @@ import (
 	"sync/atomic"
 
 	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 type Statistics interface {
@@ -133,7 +133,7 @@ func (m *defaultMailbox) run() {
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Debug("[ACTOR] Recovering")
+			plog.Debug("[ACTOR] Recovering", log.Object("actor", m.invoker), log.Object("reason", r), log.Stack())
 			m.invoker.EscalateFailure(r, msg)
 		}
 	}()

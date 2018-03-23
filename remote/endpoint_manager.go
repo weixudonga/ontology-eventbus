@@ -40,7 +40,6 @@ import (
 
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/eventstream"
-	"github.com/ontio/ontology-eventbus/common/log"
 )
 
 var endpointManager *endpointManagerValue
@@ -63,7 +62,7 @@ type endpointManagerValue struct {
 }
 
 func startEndpointManager(config *remoteConfig) {
-	log.Debug("Started EndpointManager")
+	plog.Debug("Started EndpointManager")
 
 	props := actor.FromProducer(newEndpointSupervisor).
 		WithGuardian(actor.RestartingSupervisorStrategy()).
@@ -93,7 +92,7 @@ func stopEndpointManager() {
 	endpointManager.endpointSupervisor.GracefulStop()
 	endpointManager.endpointSub = nil
 	endpointManager.connections = nil
-	log.Debug("Stopped EndpointManager")
+	plog.Debug("Stopped EndpointManager")
 }
 
 func (em *endpointManagerValue) endpointEvent(evn interface{}) {

@@ -37,8 +37,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ontio/ontology-eventbus/common/log"
-	"fmt"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 // ErrTimeout is the error used when a future times out before receiving a result.
@@ -51,7 +50,7 @@ func NewFuture(d time.Duration) *Future {
 
 	pid, ok := ProcessRegistry.Add(ref, "future"+id)
 	if !ok {
-		log.Error("failed to register future process", fmt.Sprintf("%v",pid))
+		plog.Error("failed to register future process", log.Stringer("pid", pid))
 	}
 
 	ref.pid = pid

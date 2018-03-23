@@ -39,7 +39,6 @@ import (
 
 	"time"
 
-	"github.com/ontio/ontology-eventbus/common/log"
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/zmq/messages"
 	"github.com/ontio/ontology-eventbus/mailbox"
@@ -47,8 +46,6 @@ import (
 )
 
 func main() {
-	log.Init()
-	log.Debug("test")
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 

@@ -39,8 +39,7 @@ import (
 	"github.com/ontio/ontology-eventbus/internal/queue/goring"
 	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
 	"github.com/ontio/ontology-eventbus/mailbox"
-	"github.com/ontio/ontology-eventbus/common/log"
-	"fmt"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 const (
@@ -103,7 +102,7 @@ func (m *endpointWriterMailbox) run() {
 	var msg interface{}
 	defer func() {
 		if r := recover(); r != nil {
-			log.Debug("[ACTOR] Recovering",fmt.Sprintf("reason:%v",r))
+			plog.Debug("[ACTOR] Recovering", log.Object("actor", m.invoker), log.Object("reason", r), log.Stack())
 			m.invoker.EscalateFailure(r, msg)
 		}
 	}()

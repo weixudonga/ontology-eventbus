@@ -36,8 +36,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/ontio/ontology-eventbus/common/log"
-	"fmt"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 type guardiansValue struct {
@@ -66,7 +65,7 @@ func (gs *guardiansValue) newGuardian(s SupervisorStrategy) *guardianProcess {
 
 	pid, ok := ProcessRegistry.Add(ref, "guardian"+id)
 	if !ok {
-		log.Error("failed to register guardian process", fmt.Sprintf("pid:%v", pid))
+		plog.Error("failed to register guardian process", log.Stringer("pid", pid))
 	}
 
 	ref.pid = pid

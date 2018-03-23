@@ -36,9 +36,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ontio/ontology-eventbus/common/log"
+	"github.com/ontio/ontology-eventbus/log"
 	"github.com/emirpasic/gods/stacks/linkedliststack"
-	"fmt"
 )
 
 type localContext struct {
@@ -319,7 +318,7 @@ func (ctx *localContext) InvokeSystemMessage(message interface{}) {
 	case *Restart:
 		ctx.handleRestart(msg)
 	default:
-		log.Error("unknown system message", fmt.Sprintf("%v",msg))
+		plog.Error("unknown system message", log.Message(msg))
 	}
 }
 
