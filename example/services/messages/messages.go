@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -32,18 +31,18 @@ limitations under the License.
 *****************************************************/
 package messages
 
-type ServiceARequest struct{
+type ServiceARequest struct {
 	Message string
 }
 
-type ServiceAResponse struct{
+type ServiceAResponse struct {
 	Message string
 }
 
-type ServiceBRequest struct{
+type ServiceBRequest struct {
 	Message string
 }
 
-type ServiceBResponse struct{
+type ServiceBResponse struct {
 	Message string
 }

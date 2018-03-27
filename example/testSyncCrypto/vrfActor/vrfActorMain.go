@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,18 +32,17 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
+	"runtime"
+	"time"
+
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/testSyncCrypto/commons"
-	"runtime"
-	"fmt"
 	"github.com/ontio/ontology-eventbus/mailbox"
 	"github.com/ontio/ontology-eventbus/zmqremote"
-	"time"
 )
 
-
-
-func main()  {
+func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
@@ -52,12 +50,12 @@ func main()  {
 	zmqremote.Start("127.0.0.1:9080")
 	vfprops := actor.FromProducer(func() actor.Actor { return &commons.VerifyActor{} }).WithMailbox(mailbox.Bounded(100))
 	_, err := actor.SpawnNamed(vfprops, "verify")
-	if err!= nil {
+	if err != nil {
 		fmt.Println("start actor error: ", err)
 	}
 
 	for {
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 }

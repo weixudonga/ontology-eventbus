@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,9 +32,9 @@ limitations under the License.
 package remote
 
 import (
-	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/eventhub"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 func newEndpointWatcher(address string) actor.Producer {

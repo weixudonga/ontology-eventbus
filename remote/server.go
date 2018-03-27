@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,6 +32,7 @@ limitations under the License.
 package remote
 
 import (
+	"fmt"
 	"io/ioutil"
 	slog "log"
 	"net"
@@ -43,7 +43,6 @@ import (
 	"github.com/ontio/ontology-eventbus/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-	"fmt"
 )
 
 var (

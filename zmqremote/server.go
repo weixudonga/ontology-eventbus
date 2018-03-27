@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,10 +32,9 @@ limitations under the License.
 package zmqremote
 
 import (
-
 	"github.com/ontio/ontology-eventbus/actor"
-	zmq "github.com/pebbe/zmq4"
 	"github.com/ontio/ontology-eventbus/log"
+	zmq "github.com/pebbe/zmq4"
 )
 
 var (

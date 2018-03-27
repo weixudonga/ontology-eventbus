@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -35,13 +34,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"time"
-	"github.com/Ontology/crypto"
-	"github.com/ontio/ontology-eventbus/example/testSyncCrypto/commons"
-	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/zmqremote"
-
 	"runtime"
+	"time"
+
+	"github.com/Ontology/crypto"
+	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/example/testSyncCrypto/commons"
+	"github.com/ontio/ontology-eventbus/zmqremote"
 )
 
 const loop = 10000
@@ -68,8 +67,8 @@ func main() {
 		bb.WriteString("1234567890")
 	}
 
-	signature,err:=crypto.Sign(privKey, bb.Bytes())
-	if err!= nil {
+	signature, err := crypto.Sign(privKey, bb.Bytes())
+	if err != nil {
 		fmt.Println("sign error: ", err)
 	}
 
@@ -86,9 +85,9 @@ func main() {
 	}
 	end := time.Now().UnixNano()
 
-	latency := float64(end-start)/loop/1000000
-	vrftime := float64(vrftimeSum)/loop/1000000
+	latency := float64(end-start) / loop / 1000000
+	vrftime := float64(vrftimeSum) / loop / 1000000
 
-	fmt.Println("latency: ",latency)
+	fmt.Println("latency: ", latency)
 	fmt.Println("vrftime: ", vrftime)
 }

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,16 +32,15 @@ limitations under the License.
 package commons
 
 import (
-	"fmt"
-	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/Ontology/crypto"
 	"bytes"
+	"fmt"
 	"time"
+
+	"github.com/Ontology/crypto"
+	"github.com/ontio/ontology-eventbus/actor"
 )
 
-
-
-type VerifyActor struct{
+type VerifyActor struct {
 	Count int
 }
 
@@ -66,18 +64,18 @@ func (s *VerifyActor) Receive(context actor.Context) {
 		if err != nil {
 			fmt.Println("DeSerialize failed.", err)
 		}
-		err = crypto.Verify(*pubKey,msg.Data,msg.Signature)
+		err = crypto.Verify(*pubKey, msg.Data, msg.Signature)
 		//fmt.Println(context.Self().Id, "done verifying...")
-		if err != nil{
+		if err != nil {
 			fmt.Println("verify error :", err)
 			end := time.Now().UnixNano()
 			vrftime := end - start
-			response:=&VerifyResponse{Seq:msg.Seq,Result:false,ErrorMsg:err.Error(),Vrftime:vrftime,Timestamp:msg.Timestamp}
+			response := &VerifyResponse{Seq: msg.Seq, Result: false, ErrorMsg: err.Error(), Vrftime: vrftime, Timestamp: msg.Timestamp}
 			context.Sender().Tell(response)
-		}else{
+		} else {
 			end := time.Now().UnixNano()
 			vrftime := end - start
-			response:=&VerifyResponse{Seq:msg.Seq,Result:true,ErrorMsg:"",Vrftime:vrftime,Timestamp:msg.Timestamp}
+			response := &VerifyResponse{Seq: msg.Seq, Result: true, ErrorMsg: "", Vrftime: vrftime, Timestamp: msg.Timestamp}
 			context.Sender().Tell(response)
 		}
 		//if s.Count%1 == 0 {
@@ -85,6 +83,6 @@ func (s *VerifyActor) Receive(context actor.Context) {
 		//}
 
 	default:
-		fmt.Printf("---unknown message%v\n",msg)
+		fmt.Printf("---unknown message%v\n", msg)
 	}
 }

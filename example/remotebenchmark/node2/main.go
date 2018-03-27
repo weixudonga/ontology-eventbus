@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -35,11 +34,12 @@ package main
 import (
 	"fmt"
 	"runtime"
+	"time"
+
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
 	"github.com/ontio/ontology-eventbus/mailbox"
 	"github.com/ontio/ontology-eventbus/remote"
-	"time"
 )
 
 func main() {
@@ -62,7 +62,7 @@ func main() {
 			}).
 		WithMailbox(mailbox.Bounded(1000000))
 	actor.SpawnNamed(props, "remote")
-	for{
+	for {
 		time.Sleep(1 * time.Second)
 	}
 }

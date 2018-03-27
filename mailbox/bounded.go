@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,8 +32,8 @@ limitations under the License.
 package mailbox
 
 import (
-	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
 	rbqueue "github.com/Workiva/go-datastructures/queue"
+	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
 )
 
 type boundedMailboxQueue struct {

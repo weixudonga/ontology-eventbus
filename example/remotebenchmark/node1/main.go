@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,19 +32,16 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"runtime"
+	"sync"
+	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
-	"github.com/ontio/ontology-eventbus/remote"
-
-	"sync"
-
-	"runtime"
-	"time"
-
 	"github.com/ontio/ontology-eventbus/mailbox"
-	"bytes"
+	"github.com/ontio/ontology-eventbus/remote"
 )
 
 type localActor struct {

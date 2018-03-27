@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,14 +32,15 @@ limitations under the License.
 package main
 
 import (
-	"github.com/ontio/ontology-eventbus/actor"
 	"runtime"
+	"time"
+
+	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
 	"github.com/ontio/ontology-eventbus/remote"
-	"time"
 )
 
-func main()  {
+func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
@@ -49,8 +49,7 @@ func main()  {
 	signprops := actor.FromProducer(func() actor.Actor { return &commons.SignActor{} })
 	actor.SpawnNamed(signprops, "sign")
 
-
-	for{
+	for {
 		time.Sleep(1 * time.Second)
 	}
 }

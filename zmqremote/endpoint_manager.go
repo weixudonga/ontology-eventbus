@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -36,10 +35,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ontio/ontology-eventbus/mailbox"
-
 	"github.com/ontio/ontology-eventbus/actor"
 	"github.com/ontio/ontology-eventbus/eventstream"
+	"github.com/ontio/ontology-eventbus/mailbox"
 )
 
 var endpointManager *endpointManagerValue

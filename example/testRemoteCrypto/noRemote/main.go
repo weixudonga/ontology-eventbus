@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -34,18 +33,19 @@ package main
 
 import (
 	"runtime"
-	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
-	"github.com/ontio/ontology-eventbus/eventhub"
-	"github.com/ontio/ontology-eventbus/actor"
 	"time"
+
+	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/eventhub"
+	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
 )
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	props := actor.FromProducer(func() actor.Actor { return &commons.BusynessActor{Datas:make(map[string][]byte)} })
-	bActor:=actor.Spawn(props)
+	props := actor.FromProducer(func() actor.Actor { return &commons.BusynessActor{Datas: make(map[string][]byte)} })
+	bActor := actor.Spawn(props)
 
 	signprops := actor.FromProducer(func() actor.Actor { return &commons.SignActor{} })
 	signActor := actor.Spawn(signprops)
@@ -56,12 +56,11 @@ func main() {
 	vfprops := actor.FromProducer(func() actor.Actor { return &commons.VerifyActor{} })
 	vfActor := actor.Spawn(vfprops)
 
-	eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC,vfActor)
+	eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC, vfActor)
 
 	bActor.Tell(&commons.RunMsg{})
 
-
-	for{
+	for {
 		time.Sleep(1 * time.Second)
 	}
 }

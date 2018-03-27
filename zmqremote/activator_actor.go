@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -37,8 +36,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 var (

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,12 +32,12 @@ limitations under the License.
 package commons
 
 import (
-	"github.com/ontio/ontology-eventbus/actor"
 	"fmt"
 	"github.com/Ontology/crypto"
+	"github.com/ontio/ontology-eventbus/actor"
 )
 
-type SignActor struct{
+type SignActor struct {
 	PrivateKey []byte
 }
 
@@ -52,19 +51,19 @@ func (s *SignActor) Receive(context actor.Context) {
 		fmt.Println("Restarting, actor is about restart")
 
 	case *SetPrivKey:
-		fmt.Println(context.Self().Id," set Privkey")
+		fmt.Println(context.Self().Id, " set Privkey")
 		s.PrivateKey = msg.PrivKey
 
 	case *SignRequest:
 		crypto.SetAlg("")
-		fmt.Println(context.Self().Id," is signing")
-		signature,err:=crypto.Sign(s.PrivateKey, msg.Data)
-		if err!= nil {
+		fmt.Println(context.Self().Id, " is signing")
+		signature, err := crypto.Sign(s.PrivateKey, msg.Data)
+		if err != nil {
 			fmt.Println("sign error: ", err)
 		}
-		response := &SignResponse{Signature:signature,Seq:msg.Seq}
-		fmt.Println(context.Self().Id," done signing")
-		context.Sender().Request(response,context.Self())
+		response := &SignResponse{Signature: signature, Seq: msg.Seq}
+		fmt.Println(context.Self().Id, " done signing")
+		context.Sender().Request(response, context.Self())
 
 	default:
 		fmt.Println("unknown message")

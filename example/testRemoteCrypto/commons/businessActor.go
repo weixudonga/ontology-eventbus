@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -35,13 +34,13 @@ package commons
 import (
 	"bytes"
 	"fmt"
-	"github.com/Ontology/crypto"
-	"github.com/ontio/ontology-eventbus/actor"
-
-	"github.com/ontio/ontology-eventbus/eventhub"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/Ontology/crypto"
+	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/eventhub"
 )
 
 const (
@@ -118,7 +117,7 @@ func (s *BusynessActor) Receive(context actor.Context) {
 		start := time.Now()
 		for i := 0; i < Loop2; i++ {
 			timeStamp := time.Now().UnixNano()
-			vfr := &VerifyRequest{Signature: sig, Data: s.Datas[seq], PublicKey: pubKeyBytes, Seq: seq, Timestamp:timeStamp}
+			vfr := &VerifyRequest{Signature: sig, Data: s.Datas[seq], PublicKey: pubKeyBytes, Seq: seq, Timestamp: timeStamp}
 			vrfEvent := &eventhub.Event{Topic: "VERIFYTOPIC", Publisher: context.Self(), Message: vfr, Policy: eventhub.PUBLISH_POLICY_ROUNDROBIN}
 			eventhub.GlobalEventHub.Publish(vrfEvent)
 		}
@@ -131,7 +130,7 @@ func (s *BusynessActor) Receive(context actor.Context) {
 		*s.LatencySum = *s.LatencySum + (time.Now().UnixNano() - msg.Timestamp)
 
 		if s.respCount%10000 == 0 {
-			fmt.Printf("%d ",(time.Now().UnixNano()-msg.Timestamp)/1000000)
+			fmt.Printf("%d ", (time.Now().UnixNano()-msg.Timestamp)/1000000)
 			fmt.Println(s.respCount)
 		}
 		if s.respCount == Loop2 {

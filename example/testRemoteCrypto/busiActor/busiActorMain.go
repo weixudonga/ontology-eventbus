@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -33,20 +32,19 @@ limitations under the License.
 package main
 
 import (
-	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
-	"runtime"
-	"github.com/ontio/ontology-eventbus/remote"
-	"github.com/ontio/ontology-eventbus/eventhub"
 	"fmt"
-	"time"
+	"runtime"
 	"sync"
+	"time"
+
+	"github.com/ontio/ontology-eventbus/actor"
+	"github.com/ontio/ontology-eventbus/eventhub"
+	"github.com/ontio/ontology-eventbus/example/testRemoteCrypto/commons"
 	"github.com/ontio/ontology-eventbus/mailbox"
+	"github.com/ontio/ontology-eventbus/remote"
 )
 
-
-
-func main()  {
+func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
@@ -55,7 +53,9 @@ func main()  {
 	var vrftimeSum int64
 	var latencySum int64
 	remote.Start("127.0.0.1:9082")
-	props := actor.FromProducer(func() actor.Actor { return &commons.BusynessActor{Datas:make(map[string][]byte), WgStop:&wg, VrftimeSum:&vrftimeSum, LatencySum:&latencySum} }).WithMailbox(mailbox.Bounded(100))
+	props := actor.FromProducer(func() actor.Actor {
+		return &commons.BusynessActor{Datas: make(map[string][]byte), WgStop: &wg, VrftimeSum: &vrftimeSum, LatencySum: &latencySum}
+	}).WithMailbox(mailbox.Bounded(100))
 
 	bActor, _ := actor.SpawnNamed(props, "busi")
 
@@ -66,7 +66,7 @@ func main()  {
 
 	eventhub.GlobalEventHub.Subscribe(commons.SetTOPIC, signActor)
 	eventhub.GlobalEventHub.Subscribe(commons.SigTOPIC, signActor)
-	eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC,vfActor1)
+	eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC, vfActor1)
 	//eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC,vfActor2)
 	//eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC,vfActor3)
 
@@ -79,12 +79,12 @@ func main()  {
 	fmt.Printf("Elapsed %s\n", elapsed)
 	x := int(float32(commons.Loop2) / (float32(elapsed) / float32(time.Second)))
 	fmt.Printf("Msg per sec %v\n", x)
-	vrftime := float64(vrftimeSum)/float64(commons.Loop2)/float64(1000000)
-	latency := int(float64(latencySum)/float64(commons.Loop2)/float64(1000000))
+	vrftime := float64(vrftimeSum) / float64(commons.Loop2) / float64(1000000)
+	latency := int(float64(latencySum) / float64(commons.Loop2) / float64(1000000))
 	fmt.Printf("vrftime %f\n", vrftime)
 	fmt.Printf("latency %d\n", latency)
 
 	for {
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }

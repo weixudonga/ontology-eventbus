@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -36,8 +35,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ontio/ontology-eventbus/log"
 	"github.com/emirpasic/gods/stacks/linkedliststack"
+	"github.com/ontio/ontology-eventbus/log"
 )
 
 type localContext struct {

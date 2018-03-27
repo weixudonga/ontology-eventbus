@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -35,7 +34,6 @@ package actor
 import (
 	"reflect"
 	"testing"
-	"github.com/ontio/ontology-eventbus/common/log"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,8 +46,6 @@ func (self *ShortLivingActor) Receive(ctx Context) {
 }
 
 func TestStopFuture(t *testing.T) {
-	log.Debug("hello world")
-
 	ID := "UniqueID"
 	{
 		props := FromProducer(func() Actor { return &ShortLivingActor{} })

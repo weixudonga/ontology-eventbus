@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
 
-
 /***************************************************
 Copyright 2016 https://github.com/AsynkronIT/protoactor-go
 
@@ -36,9 +35,9 @@ import (
 	"runtime"
 	"sync/atomic"
 
-	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/internal/queue/goring"
 	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
+	"github.com/ontio/ontology-eventbus/log"
 	"github.com/ontio/ontology-eventbus/mailbox"
 )
 
