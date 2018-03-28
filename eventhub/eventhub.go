@@ -70,7 +70,6 @@ func (this *EventHub) Publish(event *Event) {
 	//go func() {
 	actors, ok := this.Subscribers.Get(event.Topic)
 	if !ok {
-		fmt.Println("no subscribers yet!")
 		return
 	}
 	subscribers := actors.([]*actor.PID)
@@ -95,7 +94,6 @@ func (this *EventHub) Unsubscribe(topic string, subscriber *actor.PID) {
 
 	tmpslice, ok := this.Subscribers.Get(topic)
 	if !ok {
-		fmt.Printf("No subscriber on topic:%s yet.\n", topic)
 		return
 	}
 	//defer this.RWMutex.Unlock()
@@ -119,7 +117,6 @@ func (this *EventHub) sendEventByPolicy(subscribers []*actor.PID, event *Event, 
 	case PublishPolicyRandom:
 		length := len(subscribers)
 		if length == 0 {
-			fmt.Printf("no subscribers yet!")
 			return
 		}
 		var i int

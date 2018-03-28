@@ -59,7 +59,7 @@ func Start(address string, options ...RemotingOption) {
 		os.Exit(1)
 	}
 	config := defaultRemoteConfig()
-	fmt.Println(config.endpointWriterBatchSize)
+
 	for _, option := range options {
 		option(config)
 	}
@@ -95,13 +95,13 @@ func Shutdown(graceful bool) {
 
 		select {
 		case <-c:
-			log.Info("Stopped Proto.Actor server")
+			plog.Info("Stopped Proto.Actor server")
 		case <-time.After(time.Second * 10):
 			s.Stop()
-			log.Info("Stopped Proto.Actor server timeout")
+			plog.Info("Stopped Proto.Actor server timeout")
 		}
 	} else {
 		s.Stop()
-		log.Info("Killed Proto.Actor server")
+		plog.Info("Killed Proto.Actor server")
 	}
 }
