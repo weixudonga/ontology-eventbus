@@ -53,7 +53,6 @@ type localActor struct {
 func (state *localActor) Receive(context actor.Context) {
 	switch context.Message().(type) {
 	case *messages.Pong:
-		//fmt.Println("pong")
 		state.count++
 		if state.count%50000 == 0 {
 			fmt.Println(state.count)
@@ -61,9 +60,6 @@ func (state *localActor) Receive(context actor.Context) {
 		if state.count == state.messageCount {
 			state.wgStop.Done()
 		}
-		//case *messages.Start:
-		//	fmt.Println("Done!")
-		//	state.wgStop.Done()
 	}
 }
 

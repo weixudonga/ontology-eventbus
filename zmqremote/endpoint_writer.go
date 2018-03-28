@@ -44,16 +44,13 @@ func newEndpointWriter(address string) actor.Producer {
 	return func() actor.Actor {
 		return &endpointWriter{
 			address: address,
-			//config:  config,
 		}
 	}
 }
 
 type endpointWriter struct {
-	//config              *remoteConfig
 	address string
 	conn    *zmq.Socket
-	//stream              Remoting_ReceiveClient
 	defaultSerializerId int32
 }
 
@@ -168,7 +165,6 @@ func (state *endpointWriter) Receive(ctx actor.Context) {
 	case []interface{}:
 		state.sendEnvelopes(msg, ctx)
 	case actor.SystemMessage, actor.AutoReceiveMessage:
-		//ignore
 	default:
 		plog.Error("EndpointWriter received unknown message", log.String("address", state.address), log.TypeOf("type", msg), log.Message(msg))
 	}

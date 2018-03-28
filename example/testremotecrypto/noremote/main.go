@@ -32,39 +32,33 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/zmq/messages"
-	"github.com/ontio/ontology-eventbus/mailbox"
-	"github.com/ontio/ontology-eventbus/zmqremote"
+	"github.com/ontio/ontology-eventbus/eventhub"
+	"github.com/ontio/ontology-eventbus/example/testremotecrypto/commons"
 )
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	zmqremote.Start("127.0.0.1:8080")
+	props := actor.FromProducer(func() actor.Actor { return &commons.BusynessActor{Datas: make(map[string][]byte)} })
+	bActor := actor.Spawn(props)
 
-	var sender *actor.PID
-	props := actor.
-		FromFunc(
-			func(context actor.Context) {
-				switch msg := context.Message().(type) {
-				case *messages.StartRemote:
-					fmt.Println("Starting")
-					sender = msg.Sender
-					context.Respond(&messages.Start{})
-				case *messages.Ping:
-					sender.Tell(&messages.Pong{})
-				}
-			}).
-		WithMailbox(mailbox.Bounded(1000000))
+	signprops := actor.FromProducer(func() actor.Actor { return &commons.SignActor{} })
+	signActor := actor.Spawn(signprops)
 
-	pid, _ := actor.SpawnNamed(props, "remote")
-	fmt.Println(pid)
+	eventhub.GlobalEventHub.Subscribe(commons.SetTOPIC, signActor)
+	eventhub.GlobalEventHub.Subscribe(commons.SigTOPIC, signActor)
+
+	vfprops := actor.FromProducer(func() actor.Actor { return &commons.VerifyActor{} })
+	vfActor := actor.Spawn(vfprops)
+
+	eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC, vfActor)
+
+	bActor.Tell(&commons.RunMsg{})
 
 	for {
 		time.Sleep(1 * time.Second)

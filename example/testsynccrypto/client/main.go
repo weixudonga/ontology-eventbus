@@ -35,83 +35,59 @@ import (
 	"bytes"
 	"fmt"
 	"runtime"
-	"sync"
 	"time"
 
+	"github.com/Ontology/crypto"
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
-	"github.com/ontio/ontology-eventbus/mailbox"
-	"github.com/ontio/ontology-eventbus/remote"
+	"github.com/ontio/ontology-eventbus/example/testsynccrypto/commons"
+	"github.com/ontio/ontology-eventbus/zmqremote"
 )
 
-type localActor struct {
-	count        int
-	wgStop       *sync.WaitGroup
-	messageCount int
-}
-
-func (state *localActor) Receive(context actor.Context) {
-	switch context.Message().(type) {
-	case *messages.Pong:
-		state.count++
-		if state.count%50000 == 0 {
-			fmt.Println(state.count)
-		}
-		if state.count == state.messageCount {
-			state.wgStop.Done()
-		}
-	}
-}
-
-func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
-	return func() actor.Actor {
-		return &localActor{
-			wgStop:       stop,
-			messageCount: messageCount,
-		}
-	}
-}
+const LOOP = 10000
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	var wg sync.WaitGroup
+	zmqremote.Start("127.0.0.1:9081")
 
-	messageCount := 50000
-	remote.Start("127.0.0.1:8081")
+	var vrftimeSum int64
+	crypto.SetAlg("")
+	privKey, pubkey, _ := crypto.GenKeyPair()
 
-	props := actor.
-		FromProducer(newLocalActor(&wg, messageCount)).
-		WithMailbox(mailbox.Bounded(1000000))
-
-	pid := actor.Spawn(props)
-
-	remotePid := actor.NewPID("127.0.0.1:8080", "remote")
-	remotePid.
-		RequestFuture(&messages.StartRemote{
-			Sender: pid,
-		}, 5*time.Second).
-		Wait()
-
-	wg.Add(1)
-
-	start := time.Now()
-	fmt.Println("Starting to send")
+	buf := bytes.NewBuffer([]byte(""))
+	err := pubkey.Serialize(buf)
+	if err != nil {
+		fmt.Println("ERROR Serialize publickey: ", err)
+	}
+	pubKeyBytes := buf.Bytes()
 
 	bb := bytes.NewBuffer([]byte(""))
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 100; i++ {
 		bb.WriteString("1234567890")
 	}
-	message := &messages.Ping{Data: bb.Bytes()}
-	for i := 0; i < messageCount; i++ {
-		remotePid.Tell(message)
+
+	signature, err := crypto.Sign(privKey, bb.Bytes())
+	if err != nil {
+		fmt.Println("sign error: ", err)
 	}
 
-	wg.Wait()
-	elapsed := time.Since(start)
-	fmt.Printf("Elapsed %s", elapsed)
+	vrfactor := actor.NewPID("127.0.0.1:9080", "verify")
 
-	x := int(float32(messageCount*2) / (float32(elapsed) / float32(time.Second)))
-	fmt.Printf("Msg per sec %v", x)
+	start := time.Now().UnixNano()
+	for i := 0; i < LOOP; i++ {
+		vfr := &commons.VerifyRequest{Signature: signature, Data: bb.Bytes(), PublicKey: pubKeyBytes}
+		result, err := vrfactor.RequestFuture(vfr, 1*time.Second).Result()
+		if err != nil {
+			fmt.Println("send vrf error: ", err)
+		}
+		vrftimeSum = vrftimeSum + result.(*commons.VerifyResponse).Vrftime
+	}
+	end := time.Now().UnixNano()
+
+	latency := float64(end-start) / LOOP / 1000000
+	vrftime := float64(vrftimeSum) / LOOP / 1000000
+
+	fmt.Println("latency: ", latency)
+	fmt.Println("vrftime: ", vrftime)
 }

@@ -328,7 +328,7 @@ func main() {
 	eh.Subscribe(topic,sub2)
 	eh.Subscribe(topic,sub3)
 
-	event := eventhub.Event{Publisher:publisher,Message:PubMessage{"hello fellows"},Topic:topic,Policy:eventhub.PUBLISH_POLICY_ALL}
+	event := eventhub.Event{Publisher:publisher,Message:PubMessage{"hello fellows"},Topic:topic,Policy:eventhub.PublishPolicyAll}
 	eh.Publish(event)
 	time.Sleep(2*time.Second)
 	fmt.Println("before unsubscribe sleeping...")
@@ -337,7 +337,7 @@ func main() {
 	time.Sleep(2*time.Second)
 
 	fmt.Println("random event...")
-	randomevent := eventhub.Event{Publisher:publisher,Message:PubMessage{"hello fellows"},Topic:topic,Policy:eventhub.PUBLISH_POLICY_RANDOM}
+	randomevent := eventhub.Event{Publisher:publisher,Message:PubMessage{"hello fellows"},Topic:topic,Policy:eventhub.PublishPolicyRandom}
 	for i:=0 ;i<10;i++{
 		eh.Publish(randomevent)
 	}
@@ -345,7 +345,7 @@ func main() {
 	time.Sleep(2*time.Second)
 
 	fmt.Println("roundrobin event...")
-	roundevent := eventhub.Event{Publisher:publisher,Message:PubMessage{"hello fellows"},Topic:topic,Policy:eventhub.PUBLISH_POLICY_ROUNDROBIN}
+	roundevent := eventhub.Event{Publisher:publisher,Message:PubMessage{"hello fellows"},Topic:topic,Policy:eventhub.PublishPolicyRoundRobin}
 	for i:=0 ;i<10;i++{
 		eh.Publish(roundevent)
 	}

@@ -37,21 +37,21 @@ import (
 	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
-	. "github.com/ontio/ontology-eventbus/example/services/messages"
-	"github.com/ontio/ontology-eventbus/example/services/serviceA"
-	"github.com/ontio/ontology-eventbus/example/services/serviceB"
+	msg "github.com/ontio/ontology-eventbus/example/services/messages"
+	"github.com/ontio/ontology-eventbus/example/services/servicea"
+	"github.com/ontio/ontology-eventbus/example/services/serviceb"
 )
 
 func main() {
-	sva := actor.FromProducer(func() actor.Actor { return &serviceA.ServiceA{} })
-	svb := actor.FromProducer(func() actor.Actor { return &serviceB.ServiceB{} })
+	sva := actor.FromProducer(func() actor.Actor { return &servicea.ServiceA{} })
+	svb := actor.FromProducer(func() actor.Actor { return &serviceb.ServiceB{} })
 
 	pipA, _ := actor.SpawnNamed(sva, "serviceA")
 	pipB, _ := actor.SpawnNamed(svb, "serviceB")
 
-	pipA.Request(&ServiceARequest{"TESTA"}, pipB)
+	pipA.Request(&msg.ServiceARequest{"TESTA"}, pipB)
 
-	pipB.Request(&ServiceBRequest{"TESTB"}, pipA)
+	pipB.Request(&msg.ServiceBRequest{"TESTB"}, pipA)
 	time.Sleep(2 * time.Second)
 
 	f := pipA.RequestFuture(1, 50*time.Microsecond)

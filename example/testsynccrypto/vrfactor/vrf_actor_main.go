@@ -32,86 +32,30 @@ limitations under the License.
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"runtime"
-	"sync"
 	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
+	"github.com/ontio/ontology-eventbus/example/testsynccrypto/commons"
 	"github.com/ontio/ontology-eventbus/mailbox"
-	"github.com/ontio/ontology-eventbus/remote"
+	"github.com/ontio/ontology-eventbus/zmqremote"
 )
 
-type localActor struct {
-	count        int
-	wgStop       *sync.WaitGroup
-	messageCount int
-}
-
-func (state *localActor) Receive(context actor.Context) {
-	switch context.Message().(type) {
-	case *messages.Pong:
-		state.count++
-		if state.count%50000 == 0 {
-			fmt.Println(state.count)
-		}
-		if state.count == state.messageCount {
-			state.wgStop.Done()
-		}
-	}
-}
-
-func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
-	return func() actor.Actor {
-		return &localActor{
-			wgStop:       stop,
-			messageCount: messageCount,
-		}
-	}
-}
-
 func main() {
+
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
-	var wg sync.WaitGroup
-
-	messageCount := 50000
-	remote.Start("127.0.0.1:8081")
-
-	props := actor.
-		FromProducer(newLocalActor(&wg, messageCount)).
-		WithMailbox(mailbox.Bounded(1000000))
-
-	pid := actor.Spawn(props)
-
-	remotePid := actor.NewPID("127.0.0.1:8080", "remote")
-	remotePid.
-		RequestFuture(&messages.StartRemote{
-			Sender: pid,
-		}, 5*time.Second).
-		Wait()
-
-	wg.Add(1)
-
-	start := time.Now()
-	fmt.Println("Starting to send")
-
-	bb := bytes.NewBuffer([]byte(""))
-	for i := 0; i < 2000; i++ {
-		bb.WriteString("1234567890")
-	}
-	message := &messages.Ping{Data: bb.Bytes()}
-	for i := 0; i < messageCount; i++ {
-		remotePid.Tell(message)
+	zmqremote.Start("127.0.0.1:9080")
+	vfprops := actor.FromProducer(func() actor.Actor { return &commons.VerifyActor{} }).WithMailbox(mailbox.Bounded(100))
+	_, err := actor.SpawnNamed(vfprops, "verify")
+	if err != nil {
+		fmt.Println("start actor error: ", err)
 	}
 
-	wg.Wait()
-	elapsed := time.Since(start)
-	fmt.Printf("Elapsed %s", elapsed)
+	for {
+		time.Sleep(1 * time.Second)
+	}
 
-	x := int(float32(messageCount*2) / (float32(elapsed) / float32(time.Second)))
-	fmt.Printf("Msg per sec %v", x)
 }

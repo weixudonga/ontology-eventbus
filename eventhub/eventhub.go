@@ -46,9 +46,9 @@ type RoundRobinState struct {
 }
 
 const (
-	PUBLISH_POLICY_ALL = iota
-	PUBLISH_POLICY_ROUNDROBIN
-	PUBLISH_POLICY_RANDOM
+	PublishPolicyAll= iota
+	PublishPolicyRoundRobin
+	PublishPolicyRandom
 )
 
 type EventHub struct {
@@ -112,11 +112,11 @@ func (this *EventHub) Unsubscribe(topic string, subscriber *actor.PID) {
 
 func (this *EventHub) sendEventByPolicy(subscribers []*actor.PID, event *Event, state RoundRobinState) {
 	switch event.Policy {
-	case PUBLISH_POLICY_ALL:
+	case PublishPolicyAll:
 		for _, subscriber := range subscribers {
 			subscriber.Request(event.Message, event.Publisher)
 		}
-	case PUBLISH_POLICY_RANDOM:
+	case PublishPolicyRandom:
 		length := len(subscribers)
 		if length == 0 {
 			fmt.Printf("no subscribers yet!")
@@ -125,7 +125,7 @@ func (this *EventHub) sendEventByPolicy(subscribers []*actor.PID, event *Event, 
 		var i int
 		i = rand.Intn(length)
 		subscribers[i].Request(event.Message, event.Publisher)
-	case PUBLISH_POLICY_ROUNDROBIN:
+	case PublishPolicyRoundRobin:
 		latestIdx := state.state[event.Topic]
 		i := latestIdx + 1
 		if i < 0 {

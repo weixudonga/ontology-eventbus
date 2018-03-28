@@ -29,44 +29,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 *****************************************************/
-package main
+package servicea
 
 import (
 	"fmt"
-	"runtime"
-	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/zmq/messages"
-	"github.com/ontio/ontology-eventbus/mailbox"
-	"github.com/ontio/ontology-eventbus/zmqremote"
+	message "github.com/ontio/ontology-eventbus/example/services/messages"
 )
 
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
-	runtime.GC()
+type ServiceA struct {
+}
 
-	zmqremote.Start("127.0.0.1:8080")
+func (this *ServiceA) Receive(context actor.Context) {
+	switch msg := context.Message().(type) {
 
-	var sender *actor.PID
-	props := actor.
-		FromFunc(
-			func(context actor.Context) {
-				switch msg := context.Message().(type) {
-				case *messages.StartRemote:
-					fmt.Println("Starting")
-					sender = msg.Sender
-					context.Respond(&messages.Start{})
-				case *messages.Ping:
-					sender.Tell(&messages.Pong{})
-				}
-			}).
-		WithMailbox(mailbox.Bounded(1000000))
+	case *message.ServiceARequest:
+		fmt.Println("Receive ServiceARequest:", msg.Message)
+		context.Sender().Tell(&message.ServiceAResponse{"I got your message"})
 
-	pid, _ := actor.SpawnNamed(props, "remote")
-	fmt.Println(pid)
+	case *message.ServiceBResponse:
+		fmt.Println("Receive ServiceBResponse:", msg.Message)
 
-	for {
-		time.Sleep(1 * time.Second)
+	case int:
+		context.Sender().Tell(msg + 1)
+
+	default:
+		fmt.Printf("unknown message:%v\n", msg)
 	}
 }

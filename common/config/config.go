@@ -40,11 +40,7 @@ import (
 )
 
 const (
-	DefaultConfigFilename = "./config.json"
-	MINGENBLOCKTIME       = 2
-	DEFAULTGENBLOCKTIME   = 6
-	DBFTMINNODENUM        = 4 //min node number of dbft consensus
-	SOLOMINNODENUM        = 1 //min node number of solo consensus
+	defaultconfigfilename = "./config.json"
 )
 
 var Version string
@@ -88,7 +84,7 @@ type ConfigFile struct {
 var Parameters *Configuration
 
 func init() {
-	file, e := ioutil.ReadFile(DefaultConfigFilename)
+	file, e := ioutil.ReadFile(defaultconfigfilename)
 	if e != nil {
 		log.Fatalf("File error: %v\n", e)
 		os.Exit(1)

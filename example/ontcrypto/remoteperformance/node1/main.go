@@ -38,9 +38,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Ontology/crypto"
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
-	"github.com/ontio/ontology-eventbus/mailbox"
+	"github.com/ontio/ontology-eventbus/example/ontcrypto/remoteperformance/messages"
 	"github.com/ontio/ontology-eventbus/remote"
 )
 
@@ -77,33 +77,45 @@ func main() {
 	runtime.GC()
 
 	var wg sync.WaitGroup
+	crypto.SetAlg("")
 
-	messageCount := 50000
+	messageCount := 500
+
+	//remote.DefaultSerializerID = 1
 	remote.Start("127.0.0.1:8081")
 
 	props := actor.
-		FromProducer(newLocalActor(&wg, messageCount)).
-		WithMailbox(mailbox.Bounded(1000000))
+		FromProducer(newLocalActor(&wg, messageCount))
 
 	pid := actor.Spawn(props)
 
 	remotePid := actor.NewPID("127.0.0.1:8080", "remote")
-	remotePid.
+	sk, _ := remotePid.
 		RequestFuture(&messages.StartRemote{
 			Sender: pid,
 		}, 5*time.Second).
-		Wait()
-
+		Result()
+	fmt.Println(sk)
+	sk1 := sk.(*messages.Start).PriKey
 	wg.Add(1)
 
 	start := time.Now()
 	fmt.Println("Starting to send")
 
-	bb := bytes.NewBuffer([]byte(""))
-	for i := 0; i < 2000; i++ {
+	bb := bytes.NewBuffer([]byte("s"))
+
+	for i := 0; i < 200000; i++ {
 		bb.WriteString("1234567890")
 	}
-	message := &messages.Ping{Data: bb.Bytes()}
+	data := bb.Bytes()
+
+	signature, err := crypto.Sign(sk1, data)
+	fmt.Println(len(signature))
+	fmt.Println(len(data))
+	if err != nil {
+		fmt.Println(err)
+	}
+	message := &messages.Ping{Signature: signature, Data: data}
 	for i := 0; i < messageCount; i++ {
 		remotePid.Tell(message)
 	}

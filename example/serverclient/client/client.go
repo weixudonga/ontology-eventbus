@@ -43,8 +43,6 @@ type Client struct{}
 
 //Call the server synchronous
 func (client *Client) SyncCall(serverPID *actor.PID) (interface{}, error) {
-	//props := actor.FromProducer(func() actor.Actor { return &Client{} })
-	//actor.Spawn(props)
 	future := serverPID.RequestFuture(&message.Request{Who: "ONTIO"}, 10*time.Second)
 	result, err := future.Result()
 	return result, err

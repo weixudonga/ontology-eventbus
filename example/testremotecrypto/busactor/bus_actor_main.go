@@ -32,86 +32,55 @@ limitations under the License.
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/ontio/ontology-eventbus/actor"
-	"github.com/ontio/ontology-eventbus/example/remotebenchmark/messages"
+	"github.com/ontio/ontology-eventbus/eventhub"
+	"github.com/ontio/ontology-eventbus/example/testremotecrypto/commons"
 	"github.com/ontio/ontology-eventbus/mailbox"
 	"github.com/ontio/ontology-eventbus/remote"
 )
 
-type localActor struct {
-	count        int
-	wgStop       *sync.WaitGroup
-	messageCount int
-}
-
-func (state *localActor) Receive(context actor.Context) {
-	switch context.Message().(type) {
-	case *messages.Pong:
-		state.count++
-		if state.count%50000 == 0 {
-			fmt.Println(state.count)
-		}
-		if state.count == state.messageCount {
-			state.wgStop.Done()
-		}
-	}
-}
-
-func newLocalActor(stop *sync.WaitGroup, messageCount int) actor.Producer {
-	return func() actor.Actor {
-		return &localActor{
-			wgStop:       stop,
-			messageCount: messageCount,
-		}
-	}
-}
-
 func main() {
+
 	runtime.GOMAXPROCS(runtime.NumCPU() * 1)
 	runtime.GC()
 
 	var wg sync.WaitGroup
+	var vrftimeSum int64
+	var latencySum int64
+	remote.Start("127.0.0.1:9082")
+	props := actor.FromProducer(func() actor.Actor {
+		return &commons.BusynessActor{Datas: make(map[string][]byte), WgStop: &wg, VrftimeSum: &vrftimeSum, LatencySum: &latencySum}
+	}).WithMailbox(mailbox.Bounded(100))
 
-	messageCount := 50000
-	remote.Start("127.0.0.1:8081")
+	bActor, _ := actor.SpawnNamed(props, "busi")
 
-	props := actor.
-		FromProducer(newLocalActor(&wg, messageCount)).
-		WithMailbox(mailbox.Bounded(1000000))
+	signActor := actor.NewPID("127.0.0.1:9080", "sign")
+	vfActor1 := actor.NewPID("127.0.0.1:9081", "verify1")
 
-	pid := actor.Spawn(props)
-
-	remotePid := actor.NewPID("127.0.0.1:8080", "remote")
-	remotePid.
-		RequestFuture(&messages.StartRemote{
-			Sender: pid,
-		}, 5*time.Second).
-		Wait()
+	eventhub.GlobalEventHub.Subscribe(commons.SetTOPIC, signActor)
+	eventhub.GlobalEventHub.Subscribe(commons.SigTOPIC, signActor)
+	eventhub.GlobalEventHub.Subscribe(commons.VerifyTOPIC, vfActor1)
 
 	wg.Add(1)
-
 	start := time.Now()
-	fmt.Println("Starting to send")
 
-	bb := bytes.NewBuffer([]byte(""))
-	for i := 0; i < 2000; i++ {
-		bb.WriteString("1234567890")
-	}
-	message := &messages.Ping{Data: bb.Bytes()}
-	for i := 0; i < messageCount; i++ {
-		remotePid.Tell(message)
-	}
-
+	bActor.Tell(&commons.RunMsg{})
 	wg.Wait()
 	elapsed := time.Since(start)
-	fmt.Printf("Elapsed %s", elapsed)
+	fmt.Printf("Elapsed %s\n", elapsed)
+	x := int(float32(commons.Loop2) / (float32(elapsed) / float32(time.Second)))
+	fmt.Printf("Msg per sec %v\n", x)
+	vrftime := float64(vrftimeSum) / float64(commons.Loop2) / float64(1000000)
+	latency := int(float64(latencySum) / float64(commons.Loop2) / float64(1000000))
+	fmt.Printf("vrftime %f\n", vrftime)
+	fmt.Printf("latency %d\n", latency)
 
-	x := int(float32(messageCount*2) / (float32(elapsed) / float32(time.Second)))
-	fmt.Printf("Msg per sec %v", x)
+	for {
+		time.Sleep(1 * time.Second)
+	}
 }

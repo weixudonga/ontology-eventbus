@@ -117,7 +117,6 @@ process:
 	if sys > 0 || (!m.suspended && user > 0) {
 		// try setting the mailbox back to running
 		if atomic.CompareAndSwapInt32(&m.schedulerStatus, idle, running) {
-			//	fmt.Printf("looping %v %v %v\n", sys, user, m.suspended)
 			goto process
 		}
 	}

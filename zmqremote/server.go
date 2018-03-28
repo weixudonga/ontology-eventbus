@@ -44,7 +44,6 @@ var (
 
 func Start(address string) {
 
-	//fmt.Println("address1:" + address)
 	actor.ProcessRegistry.RegisterAddressResolver(remoteHandler)
 	actor.ProcessRegistry.Address = address
 
@@ -58,7 +57,6 @@ func Start(address string) {
 	if err != nil {
 		plog.Error("failed to Bind", log.Error(err))
 	}
-	//fmt.Println("after bind " + address)
 	plog.Info("Starting Proto.Actor server", log.String("address", address))
 	go func() {
 		edpReader.Receive(conn)
