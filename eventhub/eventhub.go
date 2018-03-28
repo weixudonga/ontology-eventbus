@@ -32,7 +32,6 @@ limitations under the License.
 package eventhub
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/ontio/ontology-eventbus/actor"
