@@ -1,20 +1,17 @@
-[中文版](./README_cn.md)
+# Actor模型的Go语言实现
 
-# The Go Language Implementation of Actor Model
+[进程内通讯](#进程内通讯)
 
-[inter-process communication](#进程内通讯)
+[跨节点通讯](#跨节点通讯)
 
-[inter-node communication](#跨节点通讯)
+[ONT验签测试](#验签测试)
 
-[ONT's Signature Verification Test](#验签测试)
+# 关于Actor模型
+Actor是计算机科学领域中的一个并行计算模型，它把actors当做通用的并行计算原语：一个actor对接收到的消息做出响应，进行本地决策，可以创建更多的actor，或者发送更多的消息；同时准备接收下一条消息。
 
-# About Actor Model
+在Actor理论中，一切都被认为是actor，这和面向对象语言里一切都被看成对象很类似。但包括面向对象语言在内的软件通常是顺序执行的，而Actor模型本质上则是并发的。
 
-Actor is a model of parallel computation model in computer science that treats "actors" as the the universal primitives of concurrent computation. In response to a message that it receives, an actor can make local decisions: make local decisions, create more actor, send more messages, and determine how to respond to the next message received.
-
-The actor model adopts the philosophy that everything is an actor. This is similar to the everthing is an object philosophy used by some object-oriented programming languages. Although softwares including object-oriented language in sequence, Actor model executes in parellel in essence.
-
-All actor has one (and only one) Mailbox. Mailbox is like a small message queue. Once the sender send message, the message will be pushed into the Mailbox. The sequence of push is determined by the sequence of sending. Mailbox also has many type of implementation, the default is FIFO. However, the implementation could be different according to the priority of pop.
+每个Actor都有一个(只有一个)Mailbox。Mailbox相当于是一个小型的队列，一旦Sender发送消息，就是将该消息入队到Mailbox中。入队的顺序按照消息发送的时间顺序。Mailbox有多种实现，默认为FIFO。但也可以根据优先级考虑出队顺序，实现算法则不相同。
 
 ![actor](/resources/actor.png)
 
@@ -25,34 +22,31 @@ All actor has one (and only one) Mailbox. Mailbox is like a small message queue.
 
 ![channel](/resources/channel.png)
 
-## Advantages of Actor Model：
+## Actor模型的优点：
 
-1. The volume of actor's Mailbox is unlimited, which won't interrupt the processing to writing.
+1. actor的mailbox容量是无限的，不会造成写入时的阻塞
 
-2. All messages of each single actor share the same mailbox(channel)
+2. 每个actor中所有消息共用一个mailbox(channel)。
 
-3. Actor do not need to care about the message writer, and could decouple the logic between each module.
+3. actor并不关心消息的发送方（writer）,可以对各模块间的逻辑进行解耦合。
 
-4. Actor can be deployed on different nodes.
+4. actor可以部署在不同节点上。
 
+## Actor模型的缺点
 
-## Disadvantage of Actor Model
-
-1. Since the Actor model is designed to be an asynchronous model, the efficiency of synchronization is not very high.
-
+1. 因为Actor被设计为异步模型，同步调用的性能不高。
 
 
-## Create Actors
+## 创建Actors
 
-Props has provided the basis of declaration of how to create Actors. The following example defines the Actor Propos by defining the declaration of the function processes messge.
-
+Props为声明如何创建Actors提供了基础，下面的例子通过定义如何处理消息的函数声明定义了Actor Props:
 ```go
 var props Props = actor.FromFunc(func(c Context) {
 	// process messages
 })
 ```
 
-Besides, The interface of Actor could be implemented by creating a structure and defining a Recive function.
+另外，可以创建一个结构体，通过定义一个Receive方法，实现了Actor的接口：
 
 ```go
 type MyActor struct {}
@@ -64,49 +58,45 @@ func (a *MyActor) Receive(c Context) {
 var props Props = actor.FromProducer(func() Actor { return &MyActor{} })
 ```
 
-Spawn and SpawnNamed make use of the given props to create the execution instance of Actor. Once the Actor is started, it begins to process the received message. Use the unique name specified by ststem to start the actor like: 
+Spawn和SpawnNamed使用给定的props去创建Actor的运行实例。一旦启动Actor就开始准备处理发来的消息。用系统给定的唯一名称来启动actor，使用：
 ```go
 pid := actor.Spawn(props)
 ```
-The return value is an unique PID. You could start Actor if you want to name PID on your own.
+结果返回唯一的PID。自己命名PID请使用 SpawnNamed 来启动Actor。
 
-Once an actor is started, a new email address will be created and related to the PID. The messages will be sent to the address, and processed bht actor.
+每次一个actor启动时，一个新的邮箱会被创建并关联PID。消息会发送到该邮箱然后actor来处理这些消息。
 
+## 处理消息
 
-## Process Messages
-
-Actor Processes messages by Receive function which is defined: 
-
+Actor通过Receive方法来处理消息，此函数定义为：
 ```go
 Receive(c actor.Context)
 ```
-The system will make sure that the function would only be called synchronously. Hence user don't need to figure out any additional protection measure.
+系统会保证该方法被同步调用，因此无需做另外的保护措施。
 
-## Communicate with other actors
+## 与其他actors通讯
 
-PID is the main interface to send actors messages. And PID.Tell fucntion is used to send messages to the PID asynchronously.
-
+PID是向actors发送消息的主要接口，PID.Tell方法用于向该PID异步的发送消息：
 ```go
 pid.Tell("Hello World")
 ```
-According to different business requirement, the communication between actors could be carried out synchronously or asynchronously. And Actors align with PID whenever they communicate.
+根据不同的业务需求，actors之间的通讯可以异步或者同步进行，不论任何时候，actors总是通过PID来进行通讯。
 
-When PID.Request or PID.RequestFutre is used to send messages, the actor receiving messages will response to the sender by Context.Sender function, which returns the PID of sender.
+当使用PID.Request或者PID.RequestFuture来进行消息发送时，接受消息的actor将会通过Context.Sender方法来回应发送者，该方法返回发送者的PID。
 
-In terms of synchronous communication, Actor uses Future to implment it. Actor will wait for the result before carry out the next step.
+同步通讯方面，actor使用Future来实现，actor再继续下一步之前会等待结果获取。
 
-User could use RequestFuture function to send message to actor and wait for result. The function will return a Future:
-
+向actor发送消息并等待结果获取，请使用RequestFuture方法，该方法会返回一个Future：
 ```go
 f := actor.RequestFuture(pid,"Hello", 50 * time.Millisecond)
 res, err := f.Result() // waits for pid to reply */
 ```
 
-# Inter-process Communication  
-## Performance
-### Asynchronous call
+# 进程内通讯
+## 性能
+### 异步调用
 
-Protoactor-go can currently pass about 2000,000 messages per second between 2 actors, and can guarantee the order of those messages. 
+protoactor-go目前可以每秒在两个actor之间传递200万条消息，并且能够保证消息的顺序。
 
 ```text
 /app/go/bin/go build -o "/tmp/Build performanceTest.go and rungo" 
@@ -116,9 +106,9 @@ end at time 1516953716291953904
 run time:10000000     elapsed time:5306 ms
 ```
 
-### Serial synchronization call
+### 串行同步调用
 
-Protoactor-go can now pass more than 500,000 messages per second between client and server in a serial synchronous call.
+protoactor-go目前可以在串行同步调用的情况下每秒在client和server间传递超过50万条消息！
 
 ```text
 goos: linux
@@ -165,7 +155,7 @@ func main() {
 
 ## Two actors communicates each other
 
-This example describes how to perform asynchronous communication between two actors. It mainly defines the behavior of the actor after receiving messages(Receive), including the processing method and the actor to which the processed message is sent. The asynchronous communication ensures the utilization of the actor.
+本例主要描述两个actor之间如何进行异步通讯，主要定义actor接收到信息之后的行为（Receive），包括处理方式和处理后的消息发送给哪个actor，异步通讯保证了actor的利用率。
 
 ```go
 type ping struct{ val int }
@@ -204,9 +194,9 @@ func main() {
 }
 ```
 
-## Server/Client synchronization call
+## Server/Client 同步调用
 
-This example mainly describes how to communicate with the actor (server) synchronously. The client sends the request message to the actor and waits for the actor to return the result. The request may need multiple actor to cooperate and complete. Asynchronous communication in the above example is used for processing between multiple actors, and the final processing result will be returned to the client.
+本例主要描述如何与actor（server）进行同步通讯，客户端将需求消息发送给actor，并等待actor的返回结果，该需求可能需要多个actor共同协作完成，多个actor之间采用上面例子中的异步通讯来进行处理，最后处理结果返回给client。
 
 
 
@@ -277,7 +267,7 @@ func main() {
 }
 ```
 ## EventHub
-Actor can perform broadcast and subscribe operations through EventHub, support ALL, ROUNDROBIN, RANDOM broadcast mode
+Actor可以通过EventHub 进行广播和订阅操作，支持ALL,ROUNDROBIN,RANDOM的广播模式
 
 ### Example
 ```go
@@ -366,24 +356,23 @@ func main() {
 
 ```
 
-# Inter-node Communication
-This project adopts two ways to implement inter-node communication, namely grpc and zeromq, corresponding to the remote and zmqremote packages in the project. During use, please select the package to be imported according to requirements (the interface is the same).
+# 跨节点通讯
+本项目采用两种方式实现跨节点通讯，分别是grpc和zeromq，对应于项目中的remote和zmqremote包，使用过程中请根据需求选择所需导入的包（接口是一样的）。
 
-In order to use zero mq need to install libzmq [https://github.com/zeromq/libzmq]
+使用zero mq 需要安装libzmq [https://github.com/zeromq/libzmq]
 
-## Performance
-### Microsoft Cloud Intra Node
+## 性能
+### 微软云跨节点
 
-| mode | 256B Message Size | 512B Message Size | 1k Message Size | 10k Message Size | 100k  Message Size| 1M  Message Size| 4M Message Size | 8M   Message Size|
+| 模式 | 256B大小消息 | 512B大小消息 | 1k大小消息 | 10k大小消息 | 100k大小消息 | 1M大小消息 | 4M大小消息 | 8M大小消息 |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| grpc | 120000/s | 100000/s | 85000/s | 40000/s | 4600/s | 490/s | 123/s | Out of grpc default 4m limit |
+| grpc | 120000/s | 100000/s | 85000/s | 40000/s | 4600/s | 490/s | 123/s | 超出grpc默认4m限制 |
 | zeromq | 170000/s | 140000/s | 10000/s | 45000/s | 4900/s | 500/s | 123/s | 62/s |
 
-## Serialization
-The module uses protobuf for serialization and deserialization by default. During use, a series of protobuf message structures need to be defined. In order to integrate with the serialization methods used in the Ontology project, and reduce the system modification workload, personalized serialization and deserialization methods is currently supported:
+## 序列化
+该模块默认采用protobuf进行序列化和反序列化，使用过程中需要定义一系列的protobuf消息结构，为了和Ontology项目中采用的序列化方式集成，减轻系统改造工作量，目前也支持个性化的序列化和反序列化方式：
 
-The current approach is to define a generic system message. The message structure is: message type + message content (data after serialization). For Ontology's commonly used structures, there are currently six commonly used message types (address, Block, header, Transaction, TxAttribute, VMCode) as follows:
-
+目前采用的方式是定义了一个通用的系统消息，消息结构为：消息类型 + 消息内容（序列化之后的数据），针对Ontology的常用结构体，目前枚举了六种常用的消息类型（address, block, header, Transaction, TxAttribute, VMCode），如下所示：
 
 ```text
 enum MsgType {
@@ -400,7 +389,7 @@ message MsgData {
   bytes data = 2;
 }
 ```
-While using, serialize the data to be transmitted in a custom manner, and then construct MsgData {msgType:xx, data:xx}, using the above enumeration definition to define msgType. After these processes ,data is custom serialized. The same is true for the received message. After receiving the message, execute the corresponding deserialization method according to msgType to deserialize the data. A simple case is as follows:
+使用时现将所需传输的数据采用自定义的方式序列化，然后构造MsgData{msgType:xx, data:xx}, msgType按照上述枚举定义，data即为自定义序列化之后的数据。接收到的消息同样如此，收到消息之后按照msgType来执行相应的反序列化方法去反序列化data。简单的案例如下：
 
 server.go
 ```go
@@ -417,12 +406,12 @@ func main() {
 				switch context.Message().(type) {
 				case *zmqremote.MsgData:
 					switch MsgData.MsgType:
-						case 0:  //Deserialization MsgData.Data
-						case 1:  //Deserialization MsgData.Data
-						case 2:  //Deserialization MMsgData.Data
-						case 3:  //Deserialization MMsgData.Data
-						case 4:  //Deserialization MMsgData.Data
-						case 5:  //Deserialization MMsgData.Data
+						case 0:  //反序列化MsgData.Data
+						case 1:  //反序列化MsgData.Data
+						case 2:  //反序列化MsgData.Data
+						case 3:  //反序列化MsgData.Data
+						case 4:  //反序列化MsgData.Data
+						case 5:  //反序列化MsgData.Data
 					context.Sender().Tell(&zmqremote.MsgData{MsgType: 1, Data: []byte("123")})
 				}
 			}).
@@ -585,7 +574,7 @@ func main() {
 
 messages/protos.proto
 
-Protobuf file generation command:
+protobuf文件的生成命令：
 protoc -I=$GOPATH/src -I=$GOPATH/src/github.com/gogo/protobuf/protobuf/ --gogoslick_out=plugins=grpc:. /path/to/protos.proto
 
 ```text
@@ -603,24 +592,22 @@ message Ping {
 message Pong {}
 ```
 
-# Signature Verification Test
+# 验签测试
 
-The code could be found at directories: example/testRemoteCrypto and example/testSyncCrypto
+代码详见example/testRemoteCrypto目录以及example/testSyncCrypto目录
 
-The test environment comes from Microsoft Azure.
+测试环境为微软云机器
 
-## Asynchronous Signature Verification Test
-| Mode                 | 256B Message Size | 512B Message Size | 1k Message Size | 10k Message Size |
-| :-:                  | :-:               | :-:               | :-:             | :-:              |
-| One Machine(zeromq)  | 3666/s            | 3590/s            | 3479/s          | 2848/s           |
-| Two Machines(zeromq) | 7509/s            | 7431/s            | 7204/s          | 6976/s           |
+## 异步验签测试
+| 模式 | 256B大小消息 | 512B大小消息 | 1k大小消息 | 10k大小消息 |
+| :-: | :-: | :-: | :-: | :-: |
+| 一台验签(zeromq) | 3666/s | 3590/s | 3479/s | 2848/s |
+| 两台验签(zeromq) | 7509/s | 7431/s | 7204/s | 6976/s |
 
-## Synchronous Signature Verification Test
-| Quota                           | 256B Message Size | 512B Message Size | 1k Message Size | 10k Message Size |
-| :-:                             | :-:               | :-:               | :-:             | :-:              |
-| Time for Signature Verification | 0.242ms           | 0.247ms           | 0.246ms         | 0.334ms          |
-| latency                         | 1.36ms            | 1.31ms            | 1.39ms          | 1.94ms           |
-
-
+## 同步验签测试
+| 指标 | 256B大小消息 | 512B大小消息 | 1k大小消息 | 10k大小消息 |
+| :-: | :-: | :-: | :-: | :-: |
+| 验签时间 | 0.242ms | 0.247ms | 0.246ms | 0.334ms |
+| latency | 1.36ms | 1.31ms | 1.39ms | 1.94ms |
 
 This Module is based on AsynkronIT/protoactor-go project, more details goes to https://github.com/AsynkronIT/protoactor-go.
