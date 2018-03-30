@@ -2,11 +2,11 @@
 
 # The Go Language Implementation of Actor Model
 
-[inter-process communication](#进程内通讯)
+[inter-process communication](#inter-process-communication)
 
-[inter-node communication](#跨节点通讯)
+[inter-node communication](#inter-node-communication)
 
-[ONT's Signature Verification Test](#验签测试)
+[ONT's Signature Verification Test](#signature-verification-test)
 
 # About Actor Model
 
