@@ -51,7 +51,7 @@ var (
 )
 
 func init() {
-	logFile, err := fileOpen("./ActorLog/")
+	logFile, err := fileOpen("./Log/ActorLog/")
 	writers := []io.Writer{logFile, os.Stderr}
 	fileAndStdoutWrite := io.MultiWriter(writers...)
 	if err != nil {
