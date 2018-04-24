@@ -37,6 +37,7 @@ import (
 
 	"github.com/ontio/ontology-eventbus/internal/queue/mpsc"
 	"github.com/ontio/ontology-eventbus/log"
+	"fmt"
 )
 
 type Statistics interface {
@@ -131,7 +132,10 @@ func (m *defaultMailbox) run() {
 
 	defer func() {
 		if r := recover(); r != nil {
-			plog.Debug("[ACTOR] Recovering", log.Object("actor", m.invoker), log.Object("reason", r), log.Stack())
+			var buf [1024]byte
+			runtime.Stack(buf[:], true)
+			fmt.Println(string(buf[:]))
+			plog.Debug("[ACTOR] Recovering", log.Object("actor", m.invoker), log.Object("reason", r), log.Stack(), log.Object("stack", string(buf[:])))
 			m.invoker.EscalateFailure(r, msg)
 		}
 	}()
